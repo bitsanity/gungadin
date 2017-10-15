@@ -44,7 +44,6 @@ public class ECIES
     StringBuilder cenc = new StringBuilder( Base64.encode(red) );
 
     int padcount = 16 - cenc.length() % 16;
-
     for ( int ii = 0; ii < padcount; ii++ )
       cenc.append( ' ' );
 
