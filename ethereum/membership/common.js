@@ -1,12 +1,11 @@
-//
-//
 const fs = require('fs');
 const Web3 = require('web3');
 const web3 = new Web3(new Web3.providers.HttpProvider('http://localhost:8545'));
+
 exports.web3 = web3;
 
-const abifile = 'Membership_sol_Membership.abi';
-const binfile = 'Membership_sol_Membership.bin';
+const abifile = './build/Membership_sol_Membership.abi';
+const binfile = './build/Membership_sol_Membership.bin';
 
 const abi = JSON.parse( fs.readFileSync(abifile).toString() );
 exports.abi = abi;

@@ -21,9 +21,17 @@ cmmn.instance( process.argv[2] )
     {
       console.log( "AddedMember " + shorten(events[ii].raw.topics[1]) );
     }
-    if (events[ii].event == 'DroppedMember')
+    else if (events[ii].event == 'DroppedMember')
     {
       console.log( "DroppedMember " + shorten(events[ii].raw.topics[1]) );
+    }
+    else if (events[ii].event == 'Fee')
+    {
+      var decoded =
+        cmmn.web3.eth.abi.decodeParameters( ["uint256"],
+                                            events[ii].raw.data );
+
+      console.log( "Fee set to: " + decoded['0'] );
     }
   }
 });

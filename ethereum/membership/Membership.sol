@@ -3,30 +3,52 @@ pragma solidity ^0.4.15;
 contract owned
 {
   address public owner;
-  function owned() { owner = msg.sender; }
 
   modifier onlyOwner {
     require( msg.sender == owner );
     _;
   }
 
-  function transferOwnership( address newOwner ) onlyOwner { owner = newOwner; }
+  function owned() { owner = msg.sender; }
+  function changeOwner( address newOwner ) onlyOwner { owner = newOwner; }
   function closedown() onlyOwner { selfdestruct( owner ); }
 }
 
+// ==========================================================================
+// List of members known by Ethereum address. Balance must be greater than
+// zero to be valid. Owner may adjust fees.
+// ==========================================================================
+
 contract Membership is owned
 {
-  event AddedMember( address indexed newmember );
-  event DroppedMember( address indexed newmember );
+  event Added( address indexed newmember );
+  event Dropped( address indexed newmember );
+  event Fee( uint256 fee );
 
-  mapping( address => uint256 ) public balances; // valid if balance > 0
+  mapping( address => uint256 ) public balances;
+  uint256 public fee;
 
-  function Membership() {}
+  function Membership() { fee = 0; }
 
-  function() payable
+  function setFee( uint256 _fee ) onlyOwner {
+    fee = _fee;
+    Fee( fee );
+  }
+
+  function addMember( address newMember ) onlyOwner
   {
-    require( isMember(msg.sender) );
-    balances[msg.sender] += msg.value;
+    Added( newMember );
+  }
+
+  function dropMember( address oldMember ) onlyOwner
+  {
+    balances[oldMember] = 0;
+    Dropped( oldMember );
+  }
+
+  function isMember( address _addr ) private constant returns (bool)
+  {
+    return 0 < balances[_addr];
   }
 
   function withdraw( uint256 amount ) onlyOwner returns (bool)
@@ -34,21 +56,10 @@ contract Membership is owned
     return owner.send( amount );
   }
 
-  function addMember( address newMember ) onlyOwner
+  function() payable
   {
-    balances[newMember] = 1;
-    AddedMember( newMember );
-  }
-
-  function dropMember( address oldMember ) onlyOwner
-  {
-    balances[oldMember] = 0;
-    DroppedMember( oldMember );
-  }
-
-  function isMember( address _addr ) constant returns (bool)
-  {
-    return 0 < balances[_addr];
+    require( msg.value >= fee );
+    balances[msg.sender] += msg.value;
   }
 }
 
