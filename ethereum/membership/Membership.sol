@@ -17,6 +17,9 @@ contract owned
 // ==========================================================================
 // List of members known by Ethereum address. Balance must be greater than
 // zero to be valid. Owner may adjust fees.
+//
+// To drop a member means setting their balance to zero. Member may repay to
+// reestablish membership.
 // ==========================================================================
 
 contract Membership is owned
@@ -46,7 +49,7 @@ contract Membership is owned
     Dropped( oldMember );
   }
 
-  function isMember( address _addr ) private constant returns (bool)
+  function isMember( address _addr ) constant returns (bool)
   {
     return 0 < balances[_addr];
   }
@@ -59,6 +62,10 @@ contract Membership is owned
   function() payable
   {
     require( msg.value >= fee );
+
+    if (balances[msg.sender] == 0)
+      Added( msg.sender );
+
     balances[msg.sender] += msg.value;
   }
 }
