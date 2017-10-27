@@ -10,45 +10,41 @@ contract owned
     _;
   }
 
-  function transferOwnership( address newOwner ) onlyOwner { owner = newOwner; }
+  function changeOwner( address newOwner ) onlyOwner { owner = newOwner; }
   function closedown() onlyOwner { selfdestruct( owner ); }
 }
 
-// interface we expect for a contract that helps us check if a given address
-// is one of our members
-
-contract Membership {
+// interface to check if given address is a member
+interface Membership {
   function isMember( address pusher ) returns (bool);
 }
 
 // ---------------------------------------------------------------------------
-// Smart contract that publishes "chunks", files published in IPFS
+// contract that enables members to broadcast pubkey/ipfs hash pairs
 // ---------------------------------------------------------------------------
-
 contract Publisher is owned
 {
   event Published( bytes receiverpubkey, string ipfshash );
 
-  address membershipContract;
+  Membership public membership;
 
   function Publisher() {}
 
   function setMembershipContract( address _contract ) onlyOwner
   {
     require( isContract(_contract) );
-    membershipContract = _contract;
+    membership = Membership(_contract);
   }
 
   function() payable { revert(); }
 
   function publish( bytes receiverpubkey, string ipfshash )
   {
-    require( Membership(membershipContract).isMember(msg.sender) );
-
+    require( membership.isMember(msg.sender) );
     Published( receiverpubkey, ipfshash );
   }
 
-  function isContract( address _addr ) private returns (bool)
+  function isContract( address _addr ) private constant returns (bool)
   {
     uint length;
     assembly { length := extcodesize(_addr) }

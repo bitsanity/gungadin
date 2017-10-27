@@ -8,7 +8,7 @@ export commd=$1
 if [ -z $commd ]
 then
   echo building...
-  solcjs --bin --abi Publisher.sol
+  solcjs --bin --abi --optimize -o ./build Publisher.sol
   exit
 fi
 
