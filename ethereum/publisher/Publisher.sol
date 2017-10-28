@@ -14,14 +14,10 @@ contract owned
   function closedown() onlyOwner { selfdestruct( owner ); }
 }
 
-// interface to check if given address is a member
 interface Membership {
   function isMember( address pusher ) returns (bool);
 }
 
-// ---------------------------------------------------------------------------
-// contract that enables members to broadcast pubkey/ipfs hash pairs
-// ---------------------------------------------------------------------------
 contract Publisher is owned
 {
   event Published( bytes receiverpubkey, string ipfshash );
@@ -32,7 +28,6 @@ contract Publisher is owned
 
   function setMembershipContract( address _contract ) onlyOwner
   {
-    require( isContract(_contract) );
     membership = Membership(_contract);
   }
 
@@ -42,13 +37,6 @@ contract Publisher is owned
   {
     require( membership.isMember(msg.sender) );
     Published( receiverpubkey, ipfshash );
-  }
-
-  function isContract( address _addr ) private constant returns (bool)
-  {
-    uint length;
-    assembly { length := extcodesize(_addr) }
-    return (length > 0);
   }
 }
 

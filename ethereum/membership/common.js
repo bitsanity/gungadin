@@ -10,8 +10,12 @@ const binfile = './build/Membership_sol_Membership.bin';
 const abi = JSON.parse( fs.readFileSync(abifile).toString() );
 exports.abi = abi;
 
-const bytecode = fs.readFileSync(binfile).toString();
-exports.bytecode = bytecode;
+exports.bytecode = function() {
+  var binary = fs.readFileSync(binfile).toString();
+  if (!binary.startsWith('0x'))
+    binary = '0x' + binary;
+  return binary;
+}
 
 const contract = new web3.eth.Contract(abi);
 exports.contract = contract;

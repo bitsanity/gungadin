@@ -1,13 +1,13 @@
 const cmmn = require('./common');
 
 var cb;
-cmmn.web3.eth.getCoinbase().then( (res) =>
+cmmn.web3.eth.getAccounts().then( (res) =>
 {
-  cmmn.contract.deploy( {data: cmmn.bytecode,arguments:[]} )
-               .send( {from:res, gas:2000000}, (err,res) =>
+  cmmn.contract.deploy( {data: cmmn.bytecode(),arguments:[]} )
+               .send( {from:res[0], gas:2000000}, (err,obj) =>
                {
                  if (err) console.log(err);
-                 if (res) console.log(res);
+                 if (obj) console.log(obj);
                } )
                .then( (receipt) => {
                  console.log( 'SCA: ', receipt.options.address );
