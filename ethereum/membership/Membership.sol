@@ -4,14 +4,14 @@ contract owned
 {
   address public owner;
 
-  modifier onlyOwner {
+  modifier isOwner {
     require( msg.sender == owner );
     _;
   }
 
   function owned() { owner = msg.sender; }
-  function changeOwner( address newOwner ) onlyOwner { owner = newOwner; }
-  function closedown() onlyOwner { selfdestruct( owner ); }
+  function changeOwner( address newOwner ) isOwner { owner = newOwner; }
+  function closedown() isOwner { selfdestruct( owner ); }
 }
 
 // ==========================================================================
@@ -24,49 +24,56 @@ contract owned
 
 contract Membership is owned
 {
-  event Added( address indexed newmember );
-  event Dropped( address indexed newmember );
+  event Approved( address indexed newmember );
+  event Suspended( address indexed member );
   event Fee( uint256 fee );
 
+  mapping( address => bool ) public approvals;
   mapping( address => uint256 ) public balances;
+
   uint256 public fee;
+  address public treasury;
 
-  function Membership() { fee = 0; }
+  function Membership() {}
 
-  function setFee( uint256 _fee ) onlyOwner {
+  function setFee( uint256 _fee ) isOwner
+  {
     fee = _fee;
     Fee( fee );
   }
 
-  function addMember( address newMember ) onlyOwner
+  function setTreasury( address _treasury ) isOwner { treasury = _treasury; }
+
+  function approve( address newMember ) isOwner
   {
-    Added( newMember );
+    approvals[ newMember] = true;
+    Approved( newMember );
   }
 
-  function dropMember( address oldMember ) onlyOwner
+  function suspend( address oldMember ) isOwner
   {
+    approvals[oldMember] = false;
     balances[oldMember] = 0;
-    Dropped( oldMember );
+    Suspended( oldMember );
   }
 
   function isMember( address _addr ) constant returns (bool)
   {
-    return 0 < balances[_addr];
-  }
-
-  function withdraw( uint256 amount ) onlyOwner returns (bool)
-  {
-    return owner.send( amount );
+    return approvals[_addr] && 0 < balances[_addr];
   }
 
   function() payable
   {
-    require( msg.value >= fee );
-
-    if (balances[msg.sender] == 0)
-      Added( msg.sender );
-
+    require( approvals[msg.sender] && msg.value >= fee );
     balances[msg.sender] += msg.value;
+
+    if (treasury != address(0)) require( treasury.send(msg.value) );
   }
+
+  function withdraw( uint256 amount ) isOwner returns (bool)
+  {
+    return owner.send( amount );
+  }
+
 }
 

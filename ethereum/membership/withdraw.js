@@ -5,7 +5,7 @@
 const cmmn = require('./common');
 const membership = cmmn.instance( process.argv[2] );
 
-cmmn.web3.eth.getCoinbase().then( (cb) => {
+cmmn.web3.eth.getAccounts().then( (arr) => {
 
-  membership.methods.withdraw( process.argv[3] ).send({from:cb, gas:47000});
+  membership.methods.withdraw( process.argv[3] ).send({from:arr[0], gas:47000});
 } );

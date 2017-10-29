@@ -17,13 +17,13 @@ cmmn.instance( process.argv[2] )
     console.log(
       '--------------------------------------------------------------------' );
 
-    if (events[ii].event == 'Added' )
+    if (events[ii].event == 'Approved' )
     {
-      console.log( "Added " + shorten(events[ii].raw.topics[1]) );
+      console.log( "Approved " + shorten(events[ii].raw.topics[1]) );
     }
-    else if (events[ii].event == 'DroppedMember')
+    else if (events[ii].event == 'Suspended')
     {
-      console.log( "Dropped " + shorten(events[ii].raw.topics[1]) );
+      console.log( "Suspended " + shorten(events[ii].raw.topics[1]) );
     }
     else if (events[ii].event == 'Fee')
     {

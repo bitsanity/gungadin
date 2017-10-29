@@ -21,10 +21,17 @@ interface Membership {
 contract Publisher is owned
 {
   event Published( bytes receiverpubkey, string ipfshash );
+  event Fee( uint256 fee );
 
   Membership public membership;
+  uint256 public fee;
 
-  function Publisher() {}
+  function Publisher() { fee = 0; }
+
+  function setFee( uint256 _fee ) onlyOwner {
+    fee = _fee;
+    Fee( fee );
+  }
 
   function setMembershipContract( address _contract ) onlyOwner
   {
@@ -33,9 +40,11 @@ contract Publisher is owned
 
   function() payable { revert(); }
 
-  function publish( bytes receiverpubkey, string ipfshash )
+  function publish( bytes receiverpubkey, string ipfshash ) payable
   {
+    require( msg.value >= fee );
     require( membership.isMember(msg.sender) );
+
     Published( receiverpubkey, ipfshash );
   }
 }
