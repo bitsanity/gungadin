@@ -9,7 +9,7 @@
 
 commd=$1
 ethdir=`pwd`
-pubbase=$ethdir/publisher/Publisher_sol_Publisher
+pubbase=$ethdir/publisher/build/Publisher_sol_Publisher
 web3j=$HOME/web3j
 w3jlib=$web3j/lib
 

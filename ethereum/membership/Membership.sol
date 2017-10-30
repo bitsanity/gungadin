@@ -18,8 +18,8 @@ contract owned
 // List of members known by Ethereum address. Balance must be greater than
 // zero to be valid. Owner may adjust fees.
 //
-// To drop a member means setting their balance to zero. Member may repay to
-// reestablish membership.
+// To suspend a member means setting their balance to zero. Member must be
+// reapproved and repay to reestablish membership.
 // ==========================================================================
 
 contract Membership is owned
