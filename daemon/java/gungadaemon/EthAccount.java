@@ -34,5 +34,10 @@ public class EthAccount
   {
     return credentials_;
   }
+
+  public String address()
+  {
+    return credentials_.getAddress();
+  }
 }
 

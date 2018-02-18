@@ -21,9 +21,7 @@ Encrypted Files on a Blockchain
 2. Apache Ant(TM) (for development)
   * http://ant.apache.org/
 
-3. scrypt
-
-4. Google's ZXing
+3. https://github.com/bitsanity/cryptils
 
 5. web3j 2.3.1
   * Java version of node.js's web3 library - interface to Ethereum

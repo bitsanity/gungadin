@@ -358,8 +358,8 @@ public class KGWorker extends Thread
           Globals.instance().get("publisherSCA"),
           web3,
           EthAccount.instance().credentials(),
-          new BigInteger("4000000000", 10),     // Eth GAS_PRICE = 4GWei
-          new BigInteger("21000", 10) ); // Transaction GAS_LIMIT
+          new BigInteger("1000000000", 10),     // GAS_PRICE = 1GWei
+          new BigInteger("99000", 10) );        // GAS_LIMIT
 
       pubstub.publish( new DynamicBytes(recippubkey),
                        new Utf8String(ipfshash) ).get();

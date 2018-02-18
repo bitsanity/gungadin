@@ -42,13 +42,16 @@ public class Daemon
     keyfile();
     ethphrase();
     checkwallet();
+    filecachedir();
 
     System.out.println(
       "phaethon:\n" +
       "\r[port=" + Globals.instance().get("port") + "]\n" +
       "\r[keyfilepath=" + Globals.instance().get("keyfilepath") + "]\n" +
       "\r<publisherSCA=" + Globals.instance().get("publisherSCA") + ">\n" +
-      "\r<ethwalletpath=" + Globals.instance().get("ethwalletpath") + ">\n" );
+      "\r<ethwalletpath=" + Globals.instance().get("ethwalletpath") + ">\n" +
+      "\r<filecachedir=" + Globals.instance().get("filecachedir") + ">\n"
+    );
 
     Daemon phaethon = new Daemon();
   }
@@ -123,5 +126,14 @@ public class Daemon
 
     EthAccount.instance();
   }
+
+  private static void filecachedir() throws Exception
+  {
+    String wpath = Globals.instance().get( "filecachedir" );
+
+    if (null == wpath || 0 == wpath.length())
+      throw new Exception( "need filecachedir" );
+  }
+
 }
 

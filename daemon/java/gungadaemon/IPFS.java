@@ -18,6 +18,8 @@ public class IPFS
   {
     String result = null;
 
+    System.out.println( "IPFS.pushFile pushing " + fpath );
+
     URL url = new URL( "http://localhost:5001/api/v0/add" +
                        "?quieter=true&progress=false&pin=false&path=" +
                        fpath.toString() );
@@ -57,14 +59,17 @@ public class IPFS
     return result;
   }
 
-  public static boolean getFile( String ipfsHash,
-                                 String fpath ) throws Exception
+  public static boolean saveLocal( String ipfsHash ) throws Exception
   {
     boolean result = true;
 
+    String saveas = Globals.instance().get( "filecachedir" ) + "/" + ipfsHash;
+
+    System.out.println( "IPFS.saveLocal saving " + saveas );
+
     URL url = new URL( "http://localhost:5001/api/v0/get?" +
                        "arg=" + ipfsHash +
-                       "&output=" + fpath.toString() );
+                       "&output=" + saveas );
 
     HttpURLConnection cx = (HttpURLConnection) url.openConnection();
     cx.setRequestMethod( "GET" );
@@ -73,6 +78,8 @@ public class IPFS
     int response = cx.getResponseCode();
 
     if (response != 200) result = false;
+
+    pushFile( saveas );
 
     return result;
   }
