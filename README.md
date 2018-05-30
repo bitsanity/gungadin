@@ -2,6 +2,8 @@
 
 Encrypted Files on a Blockchain
 
+Name dedicated to the anti-racism poem "Gunga Din" by Rudyard Kipling https://en.wikipedia.org/wiki/Gunga_Din
+
 ## System Requirements
 
 1. Linux 4.4+ (Ubuntu or Debian) x86_64
