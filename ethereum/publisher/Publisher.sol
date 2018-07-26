@@ -1,51 +1,65 @@
-pragma solidity ^0.4.15;
+// 0.4.21+commit.dfe3193c.Emscripten.clang
+pragma solidity ^0.4.21;
 
-contract owned
+interface Token {
+  function transfer( address to, uint amount ) external; // assume ERC20+
+}
+
+interface Membership {
+  function isMember( address pusher ) external returns (bool);
+}
+
+contract Owned
 {
   address public owner;
-  function owned() { owner = msg.sender; }
+  function Owned() public { owner = msg.sender; }
 
-  modifier onlyOwner {
+  modifier isOwner {
     require( msg.sender == owner );
     _;
   }
 
-  function changeOwner( address newOwner ) onlyOwner { owner = newOwner; }
-  function closedown() onlyOwner { selfdestruct( owner ); }
+  function changeOwner( address newOwner ) isOwner public {
+    owner = newOwner;
+  }
 }
 
-interface Membership {
-  function isMember( address pusher ) returns (bool);
-}
-
-contract Publisher is owned
+contract Publisher is Owned
 {
   event Published( bytes receiverpubkey, string ipfshash );
   event Fee( uint256 fee );
 
   Membership public membership;
+  address public treasury;
   uint256 public fee;
 
-  function Publisher() { fee = 0; }
+  function Publisher() public { fee = 0; }
 
-  function setFee( uint256 _fee ) onlyOwner {
+  function setFee( uint256 _fee ) isOwner public {
     fee = _fee;
-    Fee( fee );
+    emit Fee( fee );
   }
 
-  function setMembershipContract( address _contract ) onlyOwner
-  {
+  function setTreasury( address _treasury ) isOwner public {
+    treasury = _treasury;
+  }
+
+  function setMembership( address _contract ) isOwner public {
     membership = Membership(_contract);
   }
 
-  function() payable { revert(); }
+  function publish( bytes receiverpubkey, string ipfshash ) payable public {
+    require( msg.value >= fee && membership.isMember(msg.sender) );
+    uint dao = msg.value / 500;
+    if (treasury != address(0)) treasury.transfer( msg.value - dao );
+    emit Published( receiverpubkey, ipfshash );
+  }
 
-  function publish( bytes receiverpubkey, string ipfshash ) payable
-  {
-    require( msg.value >= fee );
-    require( membership.isMember(msg.sender) );
+  function withdraw( uint256 amount ) isOwner public {
+    owner.transfer( amount );
+  }
 
-    Published( receiverpubkey, ipfshash );
+  function sendTok( address _tok, address _to, uint256 _qty ) isOwner public {
+    Token(_tok).transfer( _to, _qty );
   }
 }
-

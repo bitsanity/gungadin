@@ -1,6 +1,11 @@
-pragma solidity ^0.4.15;
+// 0.4.21+commit.dfe3193c.Emscripten.clang
+pragma solidity ^0.4.21;
 
-contract owned
+interface Token {
+  function transfer( address to, uint amount ) external; // assume ERC20+
+}
+
+contract Owned
 {
   address public owner;
 
@@ -9,24 +14,15 @@ contract owned
     _;
   }
 
-  function owned() { owner = msg.sender; }
-  function changeOwner( address newOwner ) isOwner { owner = newOwner; }
-  function closedown() isOwner { selfdestruct( owner ); }
+  function Owned() public { owner = msg.sender; }
+  function changeOwner( address newOwner ) isOwner public { owner = newOwner; }
 }
 
-// ==========================================================================
-// List of members known by Ethereum address. Balance must be greater than
-// zero to be valid. Owner may adjust fees.
-//
-// To suspend a member means setting their balance to zero. Member must be
-// reapproved and repay to reestablish membership.
-// ==========================================================================
-
-contract Membership is owned
+contract Membership is Owned
 {
-  event Approved( address indexed newmember );
-  event Suspended( address indexed member );
+  event Approval( address indexed member, bool status );
   event Fee( uint256 fee );
+  event Receipt( address indexed member, uint256 amount );
 
   mapping( address => bool ) public approvals;
   mapping( address => uint256 ) public balances;
@@ -34,46 +30,41 @@ contract Membership is owned
   uint256 public fee;
   address public treasury;
 
-  function Membership() {}
+  function Membership() public {}
 
-  function setFee( uint256 _fee ) isOwner
-  {
+  function setFee( uint256 _fee ) isOwner public {
     fee = _fee;
-    Fee( fee );
+    emit Fee( fee );
   }
 
-  function setTreasury( address _treasury ) isOwner { treasury = _treasury; }
-
-  function approve( address newMember ) isOwner
-  {
-    approvals[ newMember] = true;
-    Approved( newMember );
+  function setTreasury( address _treasury ) isOwner public {
+    treasury = _treasury;
   }
 
-  function suspend( address oldMember ) isOwner
-  {
-    approvals[oldMember] = false;
-    balances[oldMember] = 0;
-    Suspended( oldMember );
+  function setApproval( address member, bool status ) isOwner public {
+    approvals[ member] = status;
+    emit Approval( member, status );
   }
 
-  function isMember( address _addr ) constant returns (bool)
-  {
+  function isMember( address _addr ) constant public returns (bool) {
     return approvals[_addr] && 0 < balances[_addr];
   }
 
-  function() payable
-  {
+  function() payable public {
     require( approvals[msg.sender] && msg.value >= fee );
     balances[msg.sender] += msg.value;
 
-    if (treasury != address(0)) require( treasury.send(msg.value) );
+    uint dao = msg.value / 500;
+    if (treasury != address(0)) treasury.transfer( msg.value - dao );
+    emit Receipt( msg.sender, msg.value );
   }
 
-  function withdraw( uint256 amount ) isOwner returns (bool)
-  {
-    return owner.send( amount );
+  function withdraw( uint256 amount ) isOwner public {
+    owner.transfer( amount );
   }
 
+  function sendTok( address _tok, address _to, uint256 _qty ) isOwner public {
+    Token(_tok).transfer( _to, _qty );
+  }
 }
 

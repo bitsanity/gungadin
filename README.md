@@ -1,31 +1,32 @@
-# gungadin
+# gungadin (or "gd")
 
 Encrypted Files on a Blockchain
 
-Name dedicated to the anti-racism poem "Gunga Din" by Rudyard Kipling https://en.wikipedia.org/wiki/Gunga_Din
+https://en.wikipedia.org/wiki/Gunga_Din
 
 ## System Requirements
 
 1. Linux 4.4+ (Ubuntu or Debian) x86_64
-2. Highest-capacity storage (drive or cloud) available
-3. [optional+recommended] HD Camera capable of 1080p still capture
+2. Highest-capacity storage (drive, NAS or cloud) available
+3. Full-HD Camera capable of 1080p still capture
+4. Full-HD or better screen resolution non-interlaced display
 4. GNU Compiler Collection (gcc)
 
-## Dependencies
+## Dev Dependencies
 
 1. libsecp256k1
   * https://github.com/bitcoin-core/secp256k1
-  * assume installed as $HOME/secp256k1
+  * build scripts assume installed at $HOME/secp256k1
 
 2. Oracle JDK 1.8+
   * Install UnlimitedJCEPolicy files
 
-2. Apache Ant(TM) (for development)
+3. Apache Ant(TM) (for development)
   * http://ant.apache.org/
 
-3. https://github.com/bitsanity/cryptils
+4. https://github.com/bitsanity/cryptils
 
-5. web3j 2.3.1
+5. web3j 2.3.1+
   * Java version of node.js's web3 library - interface to Ethereum
   * git clone https://github.com/web3j/web3j
   * Apache 2.0 License
