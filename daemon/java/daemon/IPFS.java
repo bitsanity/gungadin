@@ -9,7 +9,12 @@ public class IPFS
 {
   private static final String UAGENT = "Mozilla/5.0";
 
-  public IPFS() {}
+  String fileCacheDir_;
+
+  public IPFS( String filecachedir )
+  {
+    fileCacheDir_ = filecachedir;
+  }
 
   public static String pushFile( String fpath ) throws Exception
   {
@@ -60,7 +65,7 @@ public class IPFS
   {
     boolean result = true;
 
-    String saveas = Globals.instance().get( "filecachedir" ) + "/" + ipfsHash;
+    String saveas = fileCacheDir_ + "/" + ipfsHash;
 
     System.out.println( "IPFS.saveLocal saving " + saveas );
 

@@ -9,12 +9,12 @@ public class ACL
 {
   private Connection db_;
 
-  public ACL() throws Exception
+  public ACL( String dbfpath ) throws Exception
   {
     Class.forName( "org.hsqldb.jdbc.JDBCDriver" );
 
     db_ = DriverManager.getConnection(
-      "jdbc:hsqldb:file:kgserver;shutdown=true", "SA", "kgserver" );
+      "jdbc:hsqldb:file:" + dbfpath + ";shutdown=true", "SA", "kgserver" );
 
     String sql = "CREATE TABLE IF NOT EXISTS KGACL " +
                  "( K VARCHAR(256) PRIMARY KEY )";

@@ -12,31 +12,29 @@ public class Publications
 {
   private static Connection db_ = null;
 
-  public Publications() throws Exception
+  private byte[] lastResult_ = null;
+
+  public Publications( String fpath ) throws Exception
   {
     if (null == db_)
     {
       Class.forName( "org.hsqldb.jdbc.JDBCDriver" );
 
       db_ = DriverManager.getConnection(
-        "jdbc:hsqldb:file:publicationsdb;shutdown=true",
-        "SA", "gungadaemon" );
+        "jdbc:hsqldb:file:" + fpath + ";shutdown=true", "SA", "gungadaemon" );
+
+      String sql = "CREATE TABLE IF NOT EXISTS Publications " +
+                   "( IPFSHashStr VARCHAR(64) PRIMARY KEY, " +
+                   "  BlockNumber INTEGER NOT NULL, " +
+                   "  LogIndex INTEGER NOT NULL " +
+                   " )";
+
+      Statement stmt = db_.createStatement();
+      stmt.executeUpdate( sql );
+      stmt.close();
+
+      fullHashSum();
     }
-
-    // subtlety here: if someone publishes the exact same file more than once
-    // it will be the same hash and the update will be ignored, which is fine
-    // since it has to be exactly the same file (bit for bit) - if someone
-    // insists on paying more than once then that is okay by us
-
-    String sql = "CREATE TABLE IF NOT EXISTS Publications " +
-                 "( IPFSHashStr VARCHAR(64) PRIMARY KEY, " +
-                 "  BlockNumber INTEGER NOT NULL, " +
-                 "  LogIndex INTEGER NOT NULL " +
-                 " )";
-
-    Statement stmt = db_.createStatement();
-    stmt.executeUpdate( sql );
-    stmt.close();
   }
 
   public long insert( String ipfs, long blocknum, int logix) throws Exception
@@ -58,11 +56,11 @@ public class Publications
     }
   }
 
-  // calculate hash of all IPFSHashes in the DB (such as on startup or when
-  // out-of-sync somehow)
+  // calculate hash of all IPFSHashes in the DB (such as on startup or if the
+  // node gets out-of-sync somehow)
   public byte[] fullHashSum() throws Exception
   {
-    byte[] result = null;
+    lastResult_ = null;
 
     String sql =
       "SELECT IPFSHashStr FROM Publications ORDER BY BlockNumber,LogIndex";
@@ -74,26 +72,23 @@ public class Publications
     while (rs.next())
     {
       ipfs = rs.getString( 1 );
-      result = nextHash( result, HexString.decode(ipfs) );
+      nextHash( HexString.decode(ipfs) );
     }
 
     rs.close();
     stmt.close();
 
-    return result;
+    return lastResult_;
   }
 
-  public byte[] nextHash( byte[] lastresult, byte[] nextval )
-  throws Exception
+  public byte[] nextHash( byte[] nextval ) throws Exception
   {
-    byte[] result = null;
-
-    if (null != lastresult)
-      result = Kekkac256.hash( ByteOps.concat(lastresult, nextval) );
+    if (null != lastResult_)
+      lastResult_ = Kekkac256.hash( ByteOps.concat(lastResult_, nextval) );
     else
-      result = Kekkac256.hash( HexString.decode(ipfs) );
+      lastResult_ = Kekkac256.hash( nextval );
 
-    return result;
+    return lastResult_;
   }
 
   public static void main( String[] args ) throws Exception

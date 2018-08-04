@@ -10,15 +10,14 @@ public class HWM
 {
   private static Connection db_ = null;
 
-  public HWM() throws Exception
+  public HWM( String fpath ) throws Exception
   {
     if (null == db_)
     {
       Class.forName( "org.hsqldb.jdbc.JDBCDriver" );
 
       db_ = DriverManager.getConnection(
-        "jdbc:hsqldb:file:hwm;shutdown=true",
-        "SA", "gungadaemon" );
+        "jdbc:hsqldb:file:" + fpath + ";shutdown=true", "SA", "gungadaemon" );
     }
 
     String sql = "CREATE TABLE IF NOT EXISTS HWM " +

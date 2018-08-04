@@ -26,8 +26,7 @@ contract Owned
 
 contract Publisher is Owned
 {
-  event Published( bytes receiverpubkey, string ipfshash );
-  event Fee( uint256 fee );
+  event Published( bytes indexed receiverpubkey, string ipfshash );
 
   Membership public membership;
   address public treasury;
@@ -37,7 +36,6 @@ contract Publisher is Owned
 
   function setFee( uint256 _fee ) isOwner public {
     fee = _fee;
-    emit Fee( fee );
   }
 
   function setTreasury( address _treasury ) isOwner public {

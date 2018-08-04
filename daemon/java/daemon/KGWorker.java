@@ -15,9 +15,10 @@ import tbox.*;
 
 public class KGWorker extends WorkerBase
 {
-  private static ACL acl_ = null;
-
   private Socket client_ = null;
+  private ACL acl_ = null;
+  private IPFS ipfs_ = null;
+
   private boolean testmode_ = false;
 
   private Challenge ch_ = null;  // contains pub (G) and priv (g) keys
@@ -27,10 +28,11 @@ public class KGWorker extends WorkerBase
 
   private KGWorker() {}
 
-  public KGWorker( Socket client )
+  public KGWorker( Socket client, ACL acl, IPFS ipfs )
   {
     super( client );
-    acl_ = new ACL();
+    acl_ = acl;
+    ipfs_ = ipfs;
   }
 
   // @override
@@ -85,10 +87,6 @@ public class KGWorker extends WorkerBase
   private JSONObject challenge() throws Exception
   {
     ch_ = new Challenge();
-
-    // todo: replace use of global by factoring out the
-    Globals.instance().put( "daemon.publickey", ch_.publicKey() );
-
     return errorMessage( ERR_CHALL, "adilos.challenge", ch_.toString(), null );
   }
 
@@ -276,7 +274,7 @@ public class KGWorker extends WorkerBase
 
       blkwrapped.put( "sig", Base64.encode(sig) );
 
-      String ipfshash = IPFS.pushFile( fpath );
+      String ipfshash = ipfs_.pushFile( fpath );
 
       if (null == ipfshash || 0 == ipfshash.length())
         throw new Exception( "IPFS failed" );
