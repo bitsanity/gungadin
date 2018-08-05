@@ -12,7 +12,10 @@ public class Daemon
   private byte[] ethPeerPubkey_;
   private HWM hwm_;
   private NodeIdentity nodeId_;
+  private NodeIdentity daemonId_;
   private Publications pubs_;
+  private IPFS ipfs_;
+  private EthGateway gateway_;
 
   public Daemon() {}
 
@@ -34,7 +37,9 @@ public class Daemon
           ethPeerPubkey_,
           hwm_,
           nodeId_,
-          pubs_
+          pubs_,
+          ipfs_,
+          gateway_
         );
         new Thread( ethgw ).start();
       }
@@ -107,6 +112,11 @@ public class Daemon
       throw new Exception(
         "IPC key " + argsMap.get("intkeyfilepath") + " does not exist." );
 
+    if (    !Files.exists(argsMap.get("ipfscachedir"))
+         || !Files.isDirectory(argsMap.get("ipfscachedir")) )
+      throw new Exception(
+        "IPFS cache dir must exist: " + argsMap.get("ipfscachedir") );
+
     System.out.println(
       "Daemon:\n" +
       "\tuiport = " + argsMap.get("uiport") + "\n" +
@@ -118,6 +128,7 @@ public class Daemon
       "\tintkeyfilepath = " + argsMap.get("intkeyfilepath") + "\n" +
       "\tpubsdbfilepath = " + argsMap.get("pubsdbfilepath") + "\n" +
       "\thwmdbfilepath = " + argsMap.get("hwmdbfilepath") + "\n" +
+      "\tipfscachedir = " + argsMap.get("ipfscachedir") + "\n" +
     );
 
     Daemon matt = new Daemon();
@@ -128,6 +139,10 @@ public class Daemon
     matt.nodeId_ = new NodeIdentity( argsMap.get("extkeyfilepath") );
     matt.hwm_ = new HWM( argsMap.get("hwmdbfilepath") );
     matt.pubs_ = new Publications( argsMap.get("pubsdbfilepath") );
+    matt.ipfs_ = new IPFS( argsMap.get("ipfscachedir") );
+    matt.gateway_ =
+       new EthGateway( egwoutport,
+                       new NodeIdentity(argsMap.get("intkeyfilepath")).red() );
 
     matt.doDaemonStuff();
   }

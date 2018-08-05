@@ -5,6 +5,8 @@ import java.util.Arrays;
 import org.json.simple.*;
 import org.json.simple.parser.*;
 
+import tbox.*;
+
 // responds to INCOMING messages from the Ethereum gateway (events)
 
 // these messages dont have to be encrypted because its public anyway, but to
@@ -19,13 +21,15 @@ public class EthListener extends WorkerBase
   private NodeIdentity extId_; // for sharding need last char of address
   private Publications pubs_;
   private IPFS ipfs_;
+  private EthGateway gateway_;
 
   public EthListener( Socket client,
                       byte[] peerpubkey,
                       HWM hwm,
                       NodeIdentity extid,
                       Publications pubs,
-                      IPFS ipfs ) throws Exception
+                      IPFS ipfs,
+                      EthGateway gateway ) throws Exception
   {
     super( client );
     peerpubkey_ = peerpubkey;
@@ -33,6 +37,14 @@ public class EthListener extends WorkerBase
     extId_ = extid;
     pubs_ = pubs;
     ipfs_ = ipfs;
+    gateway_ = gateway;
+
+    // ok to back up some blocks to make sure we get every event
+    long newhwm = hwm_.get() - 100;
+    if (0L > newhwm)
+      newhwm = 0L;
+
+    gateway_.setHWM( newhwm );
   }
 
   // @override
@@ -111,7 +123,7 @@ public class EthListener extends WorkerBase
     char myLast = myaddr.charAt( myaddr.length() - 1 );
 
     String ipfsrehashed =
-      new String( SHA256.hash(ipfshash.getBytes()) ).toUpperCase();
+      new String( Keccak256.hash(ipfshash.getBytes()) ).toUpperCase();
 
     char ipfslast = ipfsrehashed.charAt( ipfsrehashed.length() - 1 );
 
@@ -122,7 +134,7 @@ public class EthListener extends WorkerBase
       byte[] hash = pubs_.nextHash( HexString.decode(ipfshash) );
 
       // vote the result
-
+      gateway_.vote( blockNum, HexString.encode(hash) );
     }
     else
       System.out.println( "no match: " + myLast + " != " + ipfslast );
