@@ -18,7 +18,7 @@ function getABI() {
 
 function getBinary() {
   var binary =
-    fs.readFileSync('../build/Votes_sol_Votes.bin').toString();
+    fs.readFileSync('./build/Votes_sol_Votes.bin').toString();
   if (!binary.startsWith('0x')) binary = '0x' + binary;
   return binary;
 }
@@ -42,6 +42,11 @@ function shorten(addr) {
 }
 
 function printEvent(evt) {
+  var hash = web3.eth.abi.decodeParameters( ["string"], evt.raw.data );
+
+  console.log( 'Voted:\n\tvoter = ' + shorten(evt.raw.topics[1]) +
+               '\n\tblock = '       + parseInt(evt.raw.topics[2]) +
+               '\n\tipfshash = '    + hash[0] );
 }
 
 const cmds =
@@ -100,7 +105,8 @@ web3.eth.getAccounts().then( (res) => {
       .then( (con) => {
         console.log( "SCA", con.options.address );
         process.exit(0);
-      } );
+      } )
+      .catch( e =>  { console.log(e); } );
   }
   else
   {
@@ -117,7 +123,7 @@ web3.eth.getAccounts().then( (res) => {
     if (cmd == 'events')
     {
       con.getPastEvents('allEvents', {fromBlock: 0, toBlock: 'latest'})
-         .then( (events) => {
+         .then( events => {
         for (var ii = 0; ii < events.length; ii++) {
           printEvent( events[ii] );
         }
@@ -141,8 +147,14 @@ web3.eth.getAccounts().then( (res) => {
     {
       let blocknum = process.argv[5];
       let hash = process.argv[6];
-      con.methods.vote( amt )
-                 .send( {from: eb, gas: 120000, gasPrice: MYGASPRICE} );
+      console.log( 'vote: ' + blocknum + ', ' + hash );
+
+      con.methods.fee_().call().then( fee => {
+        con.methods
+           .vote( blocknum, hash )
+           .send( {from: eb, gas: 120000, value: fee, gasPrice: MYGASPRICE} );
+      } )
+      .catch( e => { console.log(e.toString()); } );
     }
   }
 } );

@@ -1,8 +1,8 @@
 pragma solidity ^0.4.21;
 
 interface Membership {
-  function approvals( address member ) external returns (bool);
-  function isMember( address pusher ) external returns (bool);
+  function approvals( address who ) external returns (bool);
+  function isMember( address who ) external returns (bool);
 }
 
 contract Owned {
@@ -19,7 +19,9 @@ contract Owned {
 
 contract Votes is Owned {
 
-  event Vote( int indexed blocknum, string ipfshash );
+  event Vote( address indexed voter,
+              uint    indexed blocknum,
+              string          ipfshash );
 
   Membership public membership_;
   uint256    public fee_;
@@ -35,12 +37,11 @@ contract Votes is Owned {
   }
 
   function vote( uint _blocknum, string _ipfshash ) payable public {
-
     require(    msg.value >= fee_
              && membership_.isMember(msg.sender)
              && membership_.approvals(msg.sender)
            );
 
-    emit Vote( _blocknum, _ipfshash );
+    emit Vote( msg.sender, _blocknum, _ipfshash );
   }
 }
