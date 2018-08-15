@@ -56,6 +56,7 @@ const cmds =
    'events',
    'setFee',
    'setMembership',
+   'setTreasury',
    'vote'
   ];
 
@@ -68,6 +69,7 @@ function usage() {
      '\tevents |\n',
      '\tsetFee <new fe wei> |\n',
      '\tsetMembership <address> |\n',
+     '\tsetTreasury <address> |\n',
      '\tvote <blocknum> <hash> |\n'
   );
 }
@@ -141,6 +143,13 @@ web3.eth.getAccounts().then( (res) => {
       let mbrs = process.argv[5];
       checkAddr( mbrs );
       con.methods.setMembership( mbrs )
+                 .send( {from: eb, gas: 120000, gasPrice: MYGASPRICE} );
+    }
+    if (cmd == 'setTreasury')
+    {
+      let trs = process.argv[5];
+      checkAddr( trs );
+      con.methods.setTreasury( trs )
                  .send( {from: eb, gas: 120000, gasPrice: MYGASPRICE} );
     }
     if (cmd == 'vote')
