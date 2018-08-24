@@ -18,6 +18,7 @@ public class KGWorker extends WorkerBase
   private Socket client_ = null;
   private ACL acl_ = null;
   private IPFS ipfs_ = null;
+  private EthGateway gateway_ = null;
 
   private boolean testmode_ = false;
 
@@ -28,11 +29,12 @@ public class KGWorker extends WorkerBase
 
   private KGWorker() {}
 
-  public KGWorker( Socket client, ACL acl, IPFS ipfs )
+  public KGWorker( Socket client, ACL acl, IPFS ipfs, EthGateway gateway )
   {
     super( client );
     acl_ = acl;
     ipfs_ = ipfs;
+    gateway_ = gateway;
   }
 
   // @override
@@ -212,15 +214,6 @@ public class KGWorker extends WorkerBase
            || !f.exists())
         throw new Exception( "Invalid fpath: " + fpath );
 
-      // string length is an int. max size of a string is 2^31 - 1
-      // but the file will be encrypted and then encoded in Base64 which
-      // adds 25% overhead, so 3/4 of 2GB is 1.5GB
-      // TODO replace this with stream approach to handle much bigger files
-      //      even on RAM-limited device like Raspberry Pi
-
-      if (Files.size(Paths.get(fpath)) >= Integer.MAX_VALUE)
-        throw new Exception( "File too big: " + fpath );
-
       if (!f.canRead())
         throw new Exception( "Cannot read file: " + fpath );
 
@@ -237,7 +230,10 @@ public class KGWorker extends WorkerBase
 
   private void doUpload( String fpath, byte[] recippubkey ) throws Exception
   {
-    // TODO: reading whole file into memory this way limits the size of files
+    // string length is an int. max size of a string in java is 2^31 - 1 (2GB)
+    // but the file will be encrypted and then encoded in Base64 which
+    // adds 25% overhead, so 3/4 of 2GB is 1.5GB
+
     byte[] reddata = FileUtils.getFileBytes( Paths.get(fpath) );
     byte[] redkey = NodeIdentity.instance().red();
 
@@ -279,8 +275,9 @@ public class KGWorker extends WorkerBase
       if (null == ipfshash || 0 == ipfshash.length())
         throw new Exception( "IPFS failed" );
 
-      // publish the hash in Ethereum
-      //
+      gateway_.publish( recippubkey,
+                        ipfshash,
+                        blkwrapped.toString().getBytes().length );
     }
   }
 
@@ -289,7 +286,7 @@ public class KGWorker extends WorkerBase
   //
   public static void main( String[] args ) throws Exception
   {
-    KGWorker wkr = new KGWorker();
+    KGWorker wkr = new KGWorker( null, null, null, null );
 
     Secp256k1 curve = new Secp256k1();
 

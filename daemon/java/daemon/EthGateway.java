@@ -7,10 +7,9 @@ import org.json.simple.parser.*;
 
 import tbox.*;
 
-// creates/sends OUTGOING JSON-RPC messages to the Ethereum gateway process
 public class EthGateway
 {
-  private port_;
+  private int port_;
   private byte[] red_;
 
   public EthGateway( int port, byte[] daemonprivkey ) throws Exception
@@ -36,6 +35,18 @@ public class EthGateway
     String msg = HexString.encode( msgbody.toJSONString().getBytes() );
 
     send( makeRpc("vote", msg) );
+  }
+
+  public void publish( byte[] recipkey, String hash, long fsize )
+  throws Exception
+  {
+    JSONObject msgbody = new JSONObject();
+    msgbody.put( "recipkey", HexString.encode(recipkey) );
+    msgbody.put( "hash", hash );
+    msgbody.put( "fsize", fsize );
+    String msg = HexString.encode( msgbody.toJSONString().getBytes() );
+
+    send( makeRpc("publish", msg) );
   }
 
   private JSONObject makeRpc( String method, String msg )

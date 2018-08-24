@@ -29,7 +29,7 @@ public class Daemon
       while( true )
       {
         // thread to listen to the UI
-        new KGWorker( ss.accept() ).start();
+        new KGWorker( ss.accept(), acl_, ipfs_, gateway_ ).start();
 
         // thread to listen for incoming events from Ethereum
         Runnable ethgw = () -> new EthListener(
@@ -41,6 +41,7 @@ public class Daemon
           ipfs_,
           gateway_
         );
+
         new Thread( ethgw ).start();
       }
     }

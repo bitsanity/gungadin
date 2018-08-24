@@ -10,8 +10,8 @@ import tbox.*;
 // responds to INCOMING messages from the Ethereum gateway (events)
 
 // these messages dont have to be encrypted because its public anyway, but to
-// deter rogue local processes we insist on signatures according to keys
-// created at deployment time
+// deter rogue local processes we insist on signatures made by preconfigured
+// keys made at deployment time
 
 public class EthListener extends WorkerBase
 {
@@ -133,7 +133,6 @@ public class EthListener extends WorkerBase
       hwm_.set( blockNum );
       byte[] hash = pubs_.nextHash( HexString.decode(ipfshash) );
 
-      // vote the result
       gateway_.vote( blockNum, HexString.encode(hash) );
     }
     else
@@ -144,5 +143,10 @@ public class EthListener extends WorkerBase
   {
     System.out.println( "new fee: " + newfee );
   }
+
+  private void handleVoted( ) throws Exception
+  {
+  }
+
 }
 
