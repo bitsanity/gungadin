@@ -13,4 +13,8 @@ own files.
 2. indutny/elliptic
   * javascript library (an npm module) that does EC cryptography with curve
     secp256k1 and enables the UI to sign/verify messages and decrypt files. 
+  * https://github.com/indutny/elliptic
 
+3. talmobi/tor-request
+  * enables this UI to talk to clientservices (Ethereum proxy) over TOR
+  * https://github.com/talmobi/tor-request

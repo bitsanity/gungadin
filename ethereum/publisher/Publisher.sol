@@ -3,6 +3,7 @@ pragma solidity ^0.4.21;
 
 interface Token {
   function transfer( address to, uint amount ) external; // assume ERC20+
+  function transferFrom( address from, address to, uint amount ) external; // assume ERC20+
 }
 
 interface Membership {
@@ -32,7 +33,10 @@ contract Publisher is Owned
   address public treasury;
   uint256 public fee;
 
-  function Publisher() public { fee = 0; }
+  uint256 public tokenFee;
+  Token   public token;
+
+  function Publisher() public {}
 
   function setFee( uint256 _fee ) isOwner public {
     fee = _fee;
@@ -46,10 +50,36 @@ contract Publisher is Owned
     membership = Membership(_contract);
   }
 
+  function setTokenFee( uint256 _fee ) isOwner public {
+    tokenFee = _fee;
+  }
+
+  function setToken( address _token ) isOwner public {
+    token = Token(_token);
+  }
+
   function publish( bytes receiverpubkey, string ipfshash ) payable public {
-    require( msg.value >= fee && membership.isMember(msg.sender) );
-    uint dao = msg.value / 500;
-    if (treasury != address(0)) treasury.transfer( msg.value - dao );
+    require(    fee > 0
+             && msg.value >= fee
+             && membership.isMember(msg.sender) );
+
+    if (treasury != address(0))
+      treasury.transfer( msg.value - msg.value / 100 );
+
+    emit Published( receiverpubkey, ipfshash );
+  }
+
+  function publish( address tokensca, bytes receiverpubkey, string ipfshash ) public {
+    require(    membership.isMember(msg.sender)
+             && token != address(0)
+             && tokensca == token );
+
+    if (treasury != address(0)) {
+      Token t = Token(tokensca);
+      t.transferFrom( msg.sender, address(this), tokenFee );
+      t.transfer( treasury, tokenFee - tokFee/100 );
+    }
+
     emit Published( receiverpubkey, ipfshash );
   }
 

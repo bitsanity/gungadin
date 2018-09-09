@@ -5,8 +5,8 @@ import java.util.*;
 
 import tbox.*;
 
-// Remembers data for all the Publication events pertaining to this node. Up
-// to the caller to manage sharding - we store anything
+// Remembers data for all the Publication events pertaining to this node.
+// Caller to manage sharding
 
 public class Publications
 {
@@ -95,7 +95,7 @@ public class Publications
   {
     String ipfs = args[0];
     long blocknum = Long.parseLong(args[1]).longValue();
-    int index = Integer.parseInt(args[1]).intValue();
+    int index = Integer.parseInt(args[2]).intValue();
 
     if (null == args || 0 == args.length) {
       System.out.println( "Usage: <ipfshash> <blocknum> <logindex>" );

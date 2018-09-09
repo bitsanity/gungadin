@@ -7,6 +7,7 @@ interface Membership {
 
 interface Token {
   function transfer( address to, uint amount ) external; // assume ERC20+
+  function transferFrom( address from, address to, uint amount ) external; // assume ERC20+
 }
 
 contract Owned {
@@ -26,11 +27,14 @@ contract Votes is Owned {
 
   event Vote( address indexed voter,
               uint    indexed blocknum,
-              string          ipfshash );
+              string          hash );
 
   Membership public membership_;
   address    public treasury_;
   uint256    public fee_;
+
+  uint256 public tokenFee;
+  Token   public token;
 
   function Votes() public {}
 
@@ -46,18 +50,41 @@ contract Votes is Owned {
     treasury_ = _treasury;
   }
 
-  function vote( uint _blocknum, string _ipfshash ) payable public {
-    require(    msg.value >= fee_
+  function setTokenFee( uint256 _fee ) isOwner public {
+    tokenFee = _fee;
+  }
+
+  function setToken( address _token ) isOwner public {
+    token = Token(_token);
+  }
+
+  function vote( uint _blocknum, string _hash ) payable public {
+    require(    fee_ != 0
+             && msg.value >= fee_
              && membership_.isMember(msg.sender)
              && membership_.approvals(msg.sender)
            );
 
+    if (treasury_ != address(0))
+      treasury_.transfer( msg.value - msg.value / 100 );
+
+    emit Vote( msg.sender, _blocknum, _hash );
+  }
+
+  function vote( address tokensca, bytes receiverpubkey, string ipfshash ) public {
+    require(    membership_.isMember(msg.sender)
+             && membership_.approvals(msg.sender)
+             && tokensca == token
+             && token != address(0)
+           );
+
     if (treasury_ != address(0)) {
-      uint dao = msg.value / 500;
-      treasury_.transfer( msg.value - dao );
+      Token t = Token(tokensca);
+      t.transferFrom( msg.sender, address(this),tokenFee );
+      t.transfer( treasury_, tokenFee - tokFee/100 );
     }
 
-    emit Vote( msg.sender, _blocknum, _ipfshash );
+    emit Published( receiverpubkey, ipfshash );
   }
 
   function withdraw( uint amt ) isOwner public {
