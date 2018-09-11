@@ -1,0 +1,8 @@
+{
+  "chromium-args" : "--enable-logging=stderr",
+
+  "name": "ui",
+  "version": "0.1.0",
+  "description": "GUNGADIN PUBLIC UI",
+  "main": "index.html"
+}

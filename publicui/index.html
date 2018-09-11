@@ -1,0 +1,202 @@
+<!DOCTYPE html>
+<html>
+<head>
+  <title>GUNGADIN PUBLIC UI</title>
+  <meta charset="UTF-8"/>
+  <link rel="stylesheet" type="text/css" href="skin.css"/>
+  <link rel="stylesheet" type="text/css" href="modal.css"/>
+</head>
+<body>
+
+<!-- The Modal to prompt for passphrase to unlock private key -->
+<div id="myModal" class="modal">
+  <div class="modal-content">
+    <span class="close">&times;</span>
+    <div id="pphraseprompt" class="label">
+      Passphrase (or PIN) to unlock private key:
+    </div>
+    <input id="pphrasefield" type="password" size="42" maxlength="99"
+           onchange="setPassphrase();"/>
+  </div>
+</div>
+
+<div class="tab">
+<button class="tablinks"
+  onclick="openTab(event, 'Account');doAccount();">Account</button>
+<button class="tablinks"
+  onclick="openTab(event, 'System');doSystem();">GD System</button>
+<button class="tablinks"
+  onclick="openTab(event, 'Files');doFiles();">Files</button>
+</div>
+
+<!-- TAB 1 -->
+<div id="Account" class="tabcontent">
+<table width="100%">
+<tr>
+<td><div id="pubkeylabel" class="label">
+    Public Key (secp256k1, hex-encoded): </div>
+</td>
+</tr>
+<tr>
+  <td width="100%"><div id="pubkeyfield" class="roField">&nbsp;</div></td>
+</tr>
+<tr>
+  <td>&nbsp;</td>
+</tr>
+<tr>
+  <td>
+    <div id="adilosimportlabel" class="label">ADILOS Keymaster<sup>*</sup> Import:
+    <p/>
+    <div id="keynamelabel" class="label">1. Key Name:</div>
+    <input id="keynamefield" type="text"
+           size="32" maxlength="64"
+           onchange="setKeyname();"/>
+  </td>
+</tr>
+<tr>
+  <td>
+    <div id="loadkeylabel" class="label">2. Load from BIP38 file:</div>
+    <input id="keyfile" type="file"/>
+  </td>
+</tr>
+<tr>
+  <td>
+    <div id="loadkeybtnlabel" class="label">3. Click </div>
+    <button id="loadkeybtn" onclick="doLoadButton()">Load File</button> or
+  </td>
+</tr>
+<tr>
+  <td>
+    <div id="loadkeybtnnum" class="label">
+      3. a. Paste exported keymaster private key in here:
+      <br/>&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;</div>
+    <input id="bip38keyfield" type="text" size="52" maxlength="68"/>
+    <br/>
+    <div id="loadkeybtnnum2" class="label">&nbsp;&nbsp;&nbsp;b. Click </div>
+    <button id="loadfieldbtn" onclick="doLoadFieldButton()">Load Field</button>
+  </td>
+</tr>
+</table>
+<p/>
+<div id="adiloslabel" class="label">
+  <sup>*</sup>[android playstore link]
+</div>
+</div>
+
+<!-- TAB 2 -->
+<div id="System" class="tabcontent">
+<table>
+<tr>
+  <td align=right>
+    <div id="serverlabel" class="label">GD Client Services URL: </div>
+  </td>
+  <td><input id="serverfield" type="text"
+             size="30" maxlength="42"
+             value="*.onion"
+             onchange="setServer();"/>
+  </td>
+</tr>
+<tr>
+  <td align=right>
+    <div id="serverlabel2" class="label">Alternate Provider: </div>
+  </td>
+  <td><input id="serverfield2" type="text"
+             size="30" maxlength="42"
+             value="*.onion"
+             onchange="setServer2();"/>
+  </td>
+</tr>
+<tr>
+  <td align=right>
+    <div id="serverlabel3" class="label">Another Alternate: </div>
+  </td>
+  <td><input id="serverfield3" type="text"
+             size="30" maxlength="42"
+             value="*.onion"
+             onchange="setServer3();"/>
+  </td>
+</tr>
+</table>
+</div>
+
+<!-- TAB 3 -->
+<div id="Files" class="tabcontent">
+
+<table>
+
+<tr>
+<td colspan="3">
+<div class="label">Include From:</div>
+<input id="fromDate" type="date" name="fromDate" value="1970-01-01">
+<div class="label">To:</div>
+<input id="toDate" type="date" name="toDate" value="9999-12-31">
+</td>
+</tr>
+
+<tr>
+<td colspan="3">
+<div class="label">Sort by Date:</div>
+<input type="radio" name="datesortchoice" value="desc" checked />= Descending
+<input type="radio" name="datesortchoice" value="asc" />= Ascending
+</td>
+</tr>
+
+<tr>
+  <td colspan="3">
+  <div class="roField" style="overflow:scroll;height:300px">
+  2019-08-27
+  <a href="https://www.google.com"
+     download="QmT9qk3CRYbFDWpDFYeAv8T8H1gnongwKhh5J68NLkLir6">
+    QmT9qk3CRYbFDWpDFYeAv8T8H1gnongwKhh5J68NLkLir6</a>
+  </div>
+  </td>
+</tr>
+
+<tr>
+<td>
+  <table>
+    <tr>
+    <td>
+      <div id="decryptfilelabel" class="label">Decrypt file:</div>
+    </td>
+    </tr>
+    <tr>
+    <td>
+      <input id="decryptfile" type="file"/>
+    </td>
+    </tr>
+    <tr>
+      <td>
+        <button id="decryptfilebtn"
+                onclick="doDecryptButton()">Decrypt</button>
+      </td>
+    </tr>
+  </table>
+</td>
+
+<td>&nbsp;</td>
+
+<td align=right valign="top">
+  <button id="refreshbtn" onclick="doRefreshButton()">Refresh</button>
+</td>
+
+</tr>
+
+</table>
+</div>
+
+<!--
+  == SCRIPTS SECTION
+  -->
+<script type="text/javascript" src="account.js"></script>
+<script type="text/javascript" src="files.js"></script>
+<script type="text/javascript" src="modal.js"></script>
+<script type="text/javascript" src="system.js"></script>
+<script type="text/javascript" src="tabs.js"></script>
+
+<script type="text/javascript">
+  window.resizeTo( 535, 535 );
+</script>
+
+</body>
+</html>
