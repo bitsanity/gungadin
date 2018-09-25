@@ -24,7 +24,7 @@
 <button class="tablinks"
   onclick="openTab(event, 'Account');doAccount();">Account</button>
 <button class="tablinks"
-  onclick="openTab(event, 'System');doSystem();">GD System</button>
+  onclick="openTab(event, 'System');doSystem();">System</button>
 <button class="tablinks"
   onclick="openTab(event, 'Files');doFiles();">Files</button>
 </div>
@@ -33,62 +33,97 @@
 <div id="Account" class="tabcontent">
 <table width="100%">
 <tr>
-<td><div id="pubkeylabel" class="label">
-    Public Key (secp256k1, hex-encoded): </div>
-</td>
+<td colspan=3><div class="label">secp256k1 Public Key (hex):</div></td>
 </tr>
 <tr>
-  <td width="100%"><div id="pubkeyfield" class="roField">&nbsp;</div></td>
+<td colspan=3 width="100%">
+  <div id="pubkeyfield" class="roField">&nbsp;</div>
+</td>
 </tr>
+
 <tr>
   <td>&nbsp;</td>
 </tr>
+
 <tr>
-  <td>
-    <div id="adilosimportlabel" class="label">ADILOS Keymaster<sup>*</sup> Import:
-    <p/>
-    <div id="keynamelabel" class="label">1. Key Name:</div>
-    <input id="keynamefield" type="text"
-           size="32" maxlength="64"
-           onchange="setKeyname();"/>
-  </td>
+<td colspan=3>
+  <div class="label">ADILOS Keymaster<sup>*</sup> Import:</div>
+</td>
+</tr>
+
+<tr>
+<td><div class="label">1.</div></td>
+<td><div class="label">Key Name:</div></td>
+<td><input id="keynamefield" type="text" size="32" maxlength="64"
+           onchange="setKeyname();"/></td>
+</tr>
+
+<tr>
+  <td align=center colspan=3><div class="label">AND EITHER...</div></td>
+</tr>
+
+<tr>
+<td><div class="label">2.</div></td>
+<td><div class="label">Load from:</div></td>
+<td><input id="keyfile" type="file"/></td>
+</tr>
+
+<tr>
+<td><div class="label">3.</div></td>
+<td><div class="label">and Click:</div></td>
+<td><button id="loadkeybtn" onclick="doLoadButton()">Load File</button></td>
+</tr>
+
+<tr>
+  <td align=center colspan=3><div class="label">OR</div></td>
+</tr>
+
+<tr>
+<td><div class="label">2.</div></td>
+<td colspan="2">
+  <div class="label">Paste encrypted private key here:</div>
+</td>
 </tr>
 <tr>
-  <td>
-    <div id="loadkeylabel" class="label">2. Load from BIP38 file:</div>
-    <input id="keyfile" type="file"/>
-  </td>
+<td colspan=3>
+  <input id="bip38keyfield" type="text" size="52" maxlength="68"/>
+</td>
 </tr>
+
 <tr>
-  <td>
-    <div id="loadkeybtnlabel" class="label">3. Click </div>
-    <button id="loadkeybtn" onclick="doLoadButton()">Load File</button> or
-  </td>
+<td><div class="label">3.</div></td>
+<td><div class="label">and Click:</div></td>
+<td>
+<button id="loadfieldbtn" onclick="doLoadFieldButton()">Load Field</button>
+</td>
 </tr>
+
 <tr>
-  <td>
-    <div id="loadkeybtnnum" class="label">
-      3. a. Paste exported keymaster private key in here:
-      <br/>&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;</div>
-    <input id="bip38keyfield" type="text" size="52" maxlength="68"/>
-    <br/>
-    <div id="loadkeybtnnum2" class="label">&nbsp;&nbsp;&nbsp;b. Click </div>
-    <button id="loadfieldbtn" onclick="doLoadFieldButton()">Load Field</button>
-  </td>
+<td>&nbsp;</td>
 </tr>
+
+<tr>
+<td colspan="3">
+  <div class="label"><sup>*</sup>[android playstore link]</div>
+</td>
+</tr>
+
 </table>
-<p/>
-<div id="adiloslabel" class="label">
-  <sup>*</sup>[android playstore link]
-</div>
 </div>
 
 <!-- TAB 2 -->
 <div id="System" class="tabcontent">
 <table>
 <tr>
+  <td colspan="2">
+    <div id="serverlabel" class="label">
+      GUNGADIN Service Endpoints<sup>*</sup>:
+    </div>
+  </td>
+</tr>
+<tr>
   <td align=right>
-    <div id="serverlabel" class="label">GD Client Services URL: </div>
+    <div id="serverlabel" class="label">a.</div>
   </td>
   <td><input id="serverfield" type="text"
              size="30" maxlength="42"
@@ -98,7 +133,7 @@
 </tr>
 <tr>
   <td align=right>
-    <div id="serverlabel2" class="label">Alternate Provider: </div>
+    <div id="serverlabel2" class="label">b.</div>
   </td>
   <td><input id="serverfield2" type="text"
              size="30" maxlength="42"
@@ -108,13 +143,77 @@
 </tr>
 <tr>
   <td align=right>
-    <div id="serverlabel3" class="label">Another Alternate: </div>
+    <div id="serverlabel3" class="label">c.</div>
   </td>
   <td><input id="serverfield3" type="text"
              size="30" maxlength="42"
              value="*.onion"
              onchange="setServer3();"/>
   </td>
+</tr>
+<tr>
+  <td colspan="2">
+    <div id="endpointsnote" class="label">
+      <small>* see <font color="blue">http://tbd-deepsite.onion</font>
+             for list</small>
+    </div>
+  </td>
+</tr>
+<tr>
+  <td>&nbsp;</td>
+</tr>
+<tr>
+  <td colspan="2"><hr/></td>
+</tr>
+<tr>
+  <td>&nbsp;</td>
+</tr>
+<tr>
+  <td colspan="2">
+    <div id="ipfsgatewaylabel" class="label">
+      IPFS Gateways<sup>+</sup>:
+    </div>
+  </td>
+</tr>
+<tr>
+  <td align=right>
+    <div id="gatewaylabel" class="label">a.</div>
+  </td>
+  <td><input id="gatewayfield" type="text"
+             size="30" maxlength="42"
+             value="https://gateway.ifps.io/ipfs/"
+             onchange="setGateway();"/>
+  </td>
+</tr>
+<tr>
+  <td align=right>
+    <div id="gatewaylabel2" class="label">b.</div>
+  </td>
+  <td><input id="gatewayfield2" type="text"
+             size="30" maxlength="42"
+             value="https://ipfs.infura.io/ipfs/"
+             onchange="setGateway2();"/>
+  </td>
+</tr>
+<tr>
+  <td align=right>
+    <div id="gatewaylabel3" class="label">c.</div>
+  </td>
+  <td><input id="gatewayfield3" type="text"
+             size="30" maxlength="42"
+             value="http://ipfs4uvgthshqonk.onion/ipfs/"
+             onchange="setGateway3();"/>
+  </td>
+</tr>
+<tr>
+  <td colspan="2">
+    <div id="gatewaynote" class="label">
+      <small>+ any public IPFS gateway okay</small>
+    </div>
+  </td>
+</tr>
+<tr>
+  <td>&nbsp;</td>
 </tr>
 </table>
 </div>
@@ -190,11 +289,19 @@
   -->
 <script type="text/javascript" src="account.js"></script>
 <script type="text/javascript" src="files.js"></script>
+<script type="text/javascript" src="hexstring.js"></script>
 <script type="text/javascript" src="modal.js"></script>
 <script type="text/javascript" src="system.js"></script>
 <script type="text/javascript" src="tabs.js"></script>
 
 <script type="text/javascript">
+
+  try {
+      console.log('crypto support enabled!');
+  } catch (err) {
+      console.log('no crypto support :(');
+  }
+
   window.resizeTo( 535, 535 );
 </script>
 

@@ -27,7 +27,9 @@ contract Owned
 
 contract Publisher is Owned
 {
-  event Published( bytes indexed receiverpubkey, string ipfshash );
+  event Published( bytes indexed receiverpubkey,
+                   string ipfshash,
+                   string redmeta );
 
   Membership public membership;
   address public treasury;
@@ -58,7 +60,10 @@ contract Publisher is Owned
     token = Token(_token);
   }
 
-  function publish( bytes receiverpubkey, string ipfshash ) payable public {
+  function publish( bytes receiverpubkey,
+                    string ipfshash,
+                    string redmeta ) payable public {
+
     require(    fee > 0
              && msg.value >= fee
              && membership.isMember(msg.sender) );
@@ -66,10 +71,14 @@ contract Publisher is Owned
     if (treasury != address(0))
       treasury.transfer( msg.value - msg.value / 100 );
 
-    emit Published( receiverpubkey, ipfshash );
+    emit Published( receiverpubkey, ipfshash, redmeta );
   }
 
-  function publish( address tokensca, bytes receiverpubkey, string ipfshash ) public {
+  function publish( address tokensca,
+                    bytes receiverpubkey,
+                    string ipfshash,
+                    string redmeta ) public {
+
     require(    membership.isMember(msg.sender)
              && token != address(0)
              && tokensca == token );
@@ -80,7 +89,7 @@ contract Publisher is Owned
       t.transfer( treasury, tokenFee - tokFee/100 );
     }
 
-    emit Published( receiverpubkey, ipfshash );
+    emit Published( receiverpubkey, ipfshash, redmeta );
   }
 
   function withdraw( uint256 amount ) isOwner public {

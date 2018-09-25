@@ -11,9 +11,14 @@ own files.
   * https://nwjs.io
 
 2. indutny/elliptic
-  * javascript library (an npm module) that does EC cryptography with curve
-    secp256k1 and enables the UI to sign/verify messages and decrypt files. 
+  * javascript library (npm module) to do operations with curve secp256k1
+  * enables the UI to sign/verify messages
   * https://github.com/indutny/elliptic
+
+3. ricmoo/aes-js
+  * for symmetric 256-bit cryptography
+  * decrypts private keys and files
+  * https://github.com/ricmoo/aes-js
 
 3. talmobi/tor-request
   * enables this UI to talk to clientservices (Ethereum proxy) over TOR
