@@ -81,10 +81,13 @@ async function handleGetHashes( pubkey ) {
 
   result['pubkey'] = pubkey;
   result['hashes'] = [];
+  result['timestamps'] = [];
 
   for (let ii = 0; ii < pubs.length; ii++) {
     let decoded = web3.eth.abi.decodeParameter( 'string', pubs[ii].raw.data );
     result['hashes'].push( decoded );
+    result['timestamps'].push(
+      web3.eth.getBlock(pubs[ii].blockNumber).timestamp );
   }
 
   return result;
