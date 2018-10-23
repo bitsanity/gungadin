@@ -16,6 +16,25 @@ public class IPFS
     fileCacheDir_ = filecachedir;
   }
 
+  public static String push( String data ) throws Exception
+  {
+    String fname = HexString.encode( SHA256.hash(data.substring(0,1024)) )
+                            .substring( 30 ); // last 2 bytes
+
+    String tmpfname = fileCacheDir_ + "/" + fname;
+
+    try (PrintStream out = new PrintStream(new FileOutputStream(tmpfname))) {
+      out.print( data );
+    }
+
+    String result = pushFile( tmpfname );
+
+    if (!(new java.io.File(tmpfname)).delete())
+      System.err.println( "WARN: failed to delete: " + tmpfname );
+
+    return result;
+  }
+
   public static String pushFile( String fpath ) throws Exception
   {
     String result = null;

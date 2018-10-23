@@ -254,30 +254,33 @@ public class KGWorker extends WorkerBase
 
     for (int ii = chunks.length - 1; ii >= 0; ii--)
     {
-      JSONObject blkwrapped = new JSONObject();
-
       JSONObject data = new JSONObject();
       data.put( "next", next );
       data.put( "black", chunks[ii] );
-      blkwrapped.put( "data", data );
 
-      byte[] msg = data.toString().getBytes();
+      byte[] msg = data.toJSONString().getBytes();
       byte[] sig =
         new Secp256k1().signECDSARecoverable( SHA256.hash(msg), redkey );
 
       if (null == sig || 0 == sig.length)
-        throw new Exception( "recovery signature failed." );
+        throw new Exception( "recoverable signature failed." );
 
+      JSONObject blkwrapped = new JSONObject();
+      blkwrapped.put( "data", data.toJSONString() );
       blkwrapped.put( "sig", Base64.encode(sig) );
 
-      String ipfshash = ipfs_.pushFile( fpath );
+      String ipfshash = ipfs_.push( blkwrapped.toString() );
 
       if (null == ipfshash || 0 == ipfshash.length())
         throw new Exception( "IPFS failed" );
 
-      gateway_.publish( recippubkey,
-                        ipfshash,
-                        blkwrapped.toString().getBytes().length );
+      // only publish the first chunk in a chain
+      if (ii = 0)
+        gateway_.publish( recippubkey,
+                          ipfshash,
+                          blkwrapped.toString().getBytes().length );
+      else
+        next = ipfshash;
     }
   }
 
