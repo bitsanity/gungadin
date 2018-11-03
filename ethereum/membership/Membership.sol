@@ -2,7 +2,7 @@
 pragma solidity ^0.4.21;
 
 interface Token {
-  function transfer( address to, uint amount ) external; // assume ERC20+
+  function transfer( address to, uint amount ) external; // assume ERC20 compat
 }
 
 contract Owned
@@ -27,14 +27,21 @@ contract Membership is Owned
   mapping( address => bool ) public approvals;
   mapping( address => uint256 ) public balances;
 
-  uint256 public fee;
   address public treasury;
+  uint256 public fee;
+  uint256 dao;
 
-  function Membership() public {}
+  function Membership() public {
+    dao = uint256(100);
+  }
 
   function setFee( uint256 _fee ) isOwner public {
     fee = _fee;
     emit Fee( fee );
+  }
+
+  function setDao( uint256 _dao ) isOwner public {
+    dao = _dao;
   }
 
   function setTreasury( address _treasury ) isOwner public {
@@ -54,8 +61,9 @@ contract Membership is Owned
     require( approvals[msg.sender] && msg.value >= fee );
     balances[msg.sender] += msg.value;
 
-    uint dao = msg.value / 500;
-    if (treasury != address(0)) treasury.transfer( msg.value - dao );
+    if (treasury != address(0))
+      treasury.transfer( msg.value - msg.value / dao );
+
     emit Receipt( msg.sender, msg.value );
   }
 

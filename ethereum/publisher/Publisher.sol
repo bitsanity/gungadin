@@ -32,16 +32,24 @@ contract Publisher is Owned
                    string redmeta );
 
   Membership public membership;
+
   address public treasury;
   uint256 public fee;
+  uint256 dao;
 
   uint256 public tokenFee;
   Token   public token;
 
-  function Publisher() public {}
+  function Publisher() public {
+    dao = uint256(100);
+  }
 
   function setFee( uint256 _fee ) isOwner public {
     fee = _fee;
+  }
+
+  function setDao( uint256 _dao ) isOwner public {
+    dao = _dao;
   }
 
   function setTreasury( address _treasury ) isOwner public {
@@ -69,7 +77,7 @@ contract Publisher is Owned
              && membership.isMember(msg.sender) );
 
     if (treasury != address(0))
-      treasury.transfer( msg.value - msg.value / 100 );
+      treasury.transfer( msg.value - msg.value / dao );
 
     emit Published( receiverpubkey, ipfshash, redmeta );
   }
@@ -86,7 +94,7 @@ contract Publisher is Owned
     if (treasury != address(0)) {
       Token t = Token(tokensca);
       t.transferFrom( msg.sender, address(this), tokenFee );
-      t.transfer( treasury, tokenFee - tokFee/100 );
+      t.transfer( treasury, tokenFee - tokenFee/dao );
     }
 
     emit Published( receiverpubkey, ipfshash, redmeta );

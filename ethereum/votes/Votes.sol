@@ -5,9 +5,10 @@ interface Membership {
   function isMember( address who ) external returns (bool);
 }
 
+// assume ERC20 compatibility
 interface Token {
-  function transfer( address to, uint amount ) external; // assume ERC20+
-  function transferFrom( address from, address to, uint amount ) external; // assume ERC20+
+  function transfer( address to, uint amount ) external;
+  function transferFrom( address from, address to, uint amount ) external;
 }
 
 contract Owned {
@@ -32,14 +33,21 @@ contract Votes is Owned {
   Membership public membership_;
   address    public treasury_;
   uint256    public fee_;
+  uint256 dao_;
 
-  uint256 public tokenFee;
-  Token   public token;
+  uint256 public tokenFee_;
+  Token   public token_;
 
-  function Votes() public {}
+  function Votes() public {
+    dao_ = uint256(100);
+  }
 
   function setFee( uint _newfee ) isOwner public {
     fee_ = _newfee;
+  }
+
+  function setDao( uint _dao ) isOwner public {
+    dao_ = _dao;
   }
 
   function setMembership( address _contract ) isOwner public {
@@ -51,11 +59,11 @@ contract Votes is Owned {
   }
 
   function setTokenFee( uint256 _fee ) isOwner public {
-    tokenFee = _fee;
+    tokenFee_ = _fee;
   }
 
   function setToken( address _token ) isOwner public {
-    token = Token(_token);
+    token_ = Token(_token);
   }
 
   function vote( uint _blocknum, string _hash ) payable public {
@@ -66,22 +74,25 @@ contract Votes is Owned {
            );
 
     if (treasury_ != address(0))
-      treasury_.transfer( msg.value - msg.value / 100 );
+      treasury_.transfer( msg.value - msg.value / dao_ );
 
     emit Vote( msg.sender, _blocknum, _hash );
   }
 
-  function vote( address tokensca, bytes receiverpubkey, string ipfshash ) public {
+  function vote( address tokensca,
+                 bytes receiverpubkey,
+                 string ipfshash ) public {
+
     require(    membership_.isMember(msg.sender)
              && membership_.approvals(msg.sender)
-             && tokensca == token
-             && token != address(0)
+             && tokensca == token_
+             && token_ != address(0)
            );
 
     if (treasury_ != address(0)) {
       Token t = Token(tokensca);
-      t.transferFrom( msg.sender, address(this),tokenFee );
-      t.transfer( treasury_, tokenFee - tokFee/100 );
+      t.transferFrom( msg.sender, address(this),tokenFee_ );
+      t.transfer( treasury_, tokenFee_ - tokenFee_/dao_ );
     }
 
     emit Published( receiverpubkey, ipfshash );
