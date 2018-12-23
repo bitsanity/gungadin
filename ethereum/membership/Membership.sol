@@ -1,8 +1,8 @@
 // 0.4.21+commit.dfe3193c.Emscripten.clang
-pragma solidity ^0.4.21;
+pragma solidity ^0.4.25;
 
 interface Token {
-  function transfer( address to, uint amount ) external; // assume ERC20 compat
+  function transfer( address to, uint amount ) external;
 }
 
 contract Owned
@@ -14,7 +14,7 @@ contract Owned
     _;
   }
 
-  function Owned() public { owner = msg.sender; }
+  constructor() public { owner = msg.sender; }
   function changeOwner( address newOwner ) isOwner public { owner = newOwner; }
 }
 
@@ -31,7 +31,7 @@ contract Membership is Owned
   uint256 public fee;
   uint256 dao;
 
-  function Membership() public {
+  constructor() public {
     dao = uint256(100);
   }
 

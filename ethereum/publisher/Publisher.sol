@@ -1,9 +1,9 @@
-// 0.4.21+commit.dfe3193c.Emscripten.clang
-pragma solidity ^0.4.21;
+pragma solidity ^0.4.25;
 
+// assume basic ERC20 compatibility
 interface Token {
-  function transfer( address to, uint amount ) external; // assume ERC20+
-  function transferFrom( address from, address to, uint amount ) external; // assume ERC20+
+  function transfer( address to, uint amount ) external;
+  function transferFrom( address from, address to, uint amount ) external;
 }
 
 interface Membership {
@@ -13,7 +13,7 @@ interface Membership {
 contract Owned
 {
   address public owner;
-  function Owned() public { owner = msg.sender; }
+  constructor() public { owner = msg.sender; }
 
   modifier isOwner {
     require( msg.sender == owner );
@@ -40,7 +40,7 @@ contract Publisher is Owned
   uint256 public tokenFee;
   Token   public token;
 
-  function Publisher() public {
+  constructor() public {
     dao = uint256(100);
   }
 
@@ -72,8 +72,7 @@ contract Publisher is Owned
                     string ipfshash,
                     string redmeta ) payable public {
 
-    require(    fee > 0
-             && msg.value >= fee
+    require(    msg.value >= fee
              && membership.isMember(msg.sender) );
 
     if (treasury != address(0))
@@ -82,19 +81,16 @@ contract Publisher is Owned
     emit Published( receiverpubkey, ipfshash, redmeta );
   }
 
-  function publish( address tokensca,
-                    bytes receiverpubkey,
-                    string ipfshash,
-                    string redmeta ) public {
+  function publish_t( bytes receiverpubkey,
+                      string ipfshash,
+                      string redmeta ) public {
 
-    require(    membership.isMember(msg.sender)
-             && token != address(0)
-             && tokensca == token );
+    require( membership.isMember(msg.sender) );
+
+    token.transferFrom( msg.sender, address(this), tokenFee );
 
     if (treasury != address(0)) {
-      Token t = Token(tokensca);
-      t.transferFrom( msg.sender, address(this), tokenFee );
-      t.transfer( treasury, tokenFee - tokenFee/dao );
+      token.transfer( treasury, tokenFee - tokenFee/dao );
     }
 
     emit Published( receiverpubkey, ipfshash, redmeta );

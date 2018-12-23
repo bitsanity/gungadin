@@ -8,15 +8,19 @@ if ( process.argv.length != 8 ) {
     'Args: <myport> ' +
           '<daemonport> ' +
           '<daemonpubkey> ' +
-          '<mypubkey> ' +
           '<publsca> ' +
           '<votesca>' );
   process.exit( 1 );
 }
 
 const respHeader = { 'Content-Type' : 'application/json; charset=utf-8' };
-const fileSizeFeeWei = 1e6; // TODO: make this configurable/changeable
-const votingFeeWei = 1e6; // TODO: make this configurable/changeable
+
+// TODO : should adjust itself dynamically per network conditions
+const fileSizeFeeWei = 1e6;
+
+// TODO : should read the fee from the smart contract directly on init and if
+//        a vote is rejected due to insufficient fee
+const votingFeeWei = 1e6;
 
 const fs = require( 'fs' );
 const http = require( 'http' );
@@ -27,11 +31,23 @@ const web3 =
 var myPort = process.argv[2];
 var daemonPort = process.argv[3];
 var daemonPubkey = process.argv[4];
-var myPubkey = process.argv[5];
-var publishSCA = process.argv[6];
-var voteSCA = process.argv[7];
+var publishSCA = process.argv[5];
+var voteSCA = process.argv[6];
+
 var myAddress;
-web3.eth.getAccounts().then( arr => { myAddress = arr[0]; } );
+web3.eth.getAccounts().then( arr => {
+
+  myAddress = arr[0];
+
+  let msg = 'content not important';
+
+  web3.eth.sign( msg, myAddress ).then( sig => {
+    myPubkey = web3.eth.personal.ecRecover( msg, sig );
+    let derivedaddress = web3.eth.keccak256( myPubkey ).slice(12,32);
+    console.log( 'ethgw public key:\n\t', myPubkey,
+                 '\n\taddress', derivedAddress );
+  } );
+} );
 
 var publisher = new web3.eth.Contract(
   JSON.parse( fs.readFileSync('../publisher/build/Publisher_sol_Publisher.abi')
@@ -122,6 +138,8 @@ function handleNewHWM( newhwm )
 
 function handlePublish( recipkey, hash, fsize )
 {
+  // TODO: do an ipfs stat to confirm file size
+
   let price = '' + fsize * fileSizeFeeWei;
 
   web3.eth.getGasPrice().then( px => {

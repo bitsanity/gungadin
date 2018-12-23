@@ -156,14 +156,22 @@ web3.eth.getAccounts().then( (res) => {
     {
       let blocknum = process.argv[5];
       let hash = process.argv[6];
-      console.log( 'vote: ' + blocknum + ', ' + hash );
 
       con.methods.fee_().call().then( fee => {
         con.methods
            .vote( blocknum, hash )
            .send( {from: eb, gas: 120000, value: fee, gasPrice: MYGASPRICE} );
       } )
-      .catch( e => { console.log(e.toString()); } );
+      .catch( e => { console.log } );
+    }
+    if (cmd == 'vote_t')
+    {
+      let blocknum = process.argv[5];
+      let hash = process.argv[6];
+
+      con.methods.vote_t( blocknum, hash )
+      .send( {from: eb, gas: 120000, gasPrice: MYGASPRICE} )
+      .catch( e => { console.log } );
     }
   }
 } );

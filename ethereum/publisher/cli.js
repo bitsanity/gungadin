@@ -18,7 +18,7 @@ function getABI() {
 
 function getBinary() {
   var binary =
-    fs.readFileSync('../build/Publisher_sol_Publisher.bin').toString();
+    fs.readFileSync('./build/Publisher_sol_Publisher.bin').toString();
 
   if (!binary.startsWith('0x')) binary = '0x' + binary;
   return binary;
@@ -67,7 +67,7 @@ const cmds =
    'deploy',
    'events',
    'publish',
-   'sendTok'
+   'sendTok',
    'setFee',
    'setMembership',
    'setTreasury',
@@ -123,7 +123,8 @@ web3.eth.getAccounts().then( (res) => {
       .then( (con) => {
         console.log( "SCA", con.options.address );
         process.exit(0);
-      } );
+      } )
+      .catch( err => { console.log } );
   }
   else
   {
@@ -133,7 +134,7 @@ web3.eth.getAccounts().then( (res) => {
     {
       let addr = process.argv[5];
       checkAddr(addr);
-      con.methods.setTreasurer( addr )
+      con.methods.changeOwner( addr )
                  .send( {from: eb, gas: 30000, gasPrice: MYGASPRICE} );
     }
 
@@ -174,7 +175,8 @@ web3.eth.getAccounts().then( (res) => {
       let mbrship = process.argv[5];
       checkAddr( mbrship );
       con.methods.setMembership( mbrship )
-                 .send( {from: eb, gas: 120000, gasPrice: MYGASPRICE} );
+                 .send( {from: eb, gas: 120000, gasPrice: MYGASPRICE} )
+      .catch( err => { console.log } );
     }
     if (cmd == 'setTreasury')
     {

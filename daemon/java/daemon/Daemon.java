@@ -21,8 +21,8 @@ public class Daemon
 
   public doDaemonStuff() throws Exception
   {
-    ServerSocket ss = new ServerSocket( uiport );
-    ServerSocket st = new ServerSocket( egwport );
+    ServerSocket ss = new ServerSocket( uiport_ );
+    ServerSocket st = new ServerSocket( egwinport_ );
 
     try
     {

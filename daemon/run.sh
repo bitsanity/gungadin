@@ -1,25 +1,113 @@
 #!/bin/bash
 
+# Functions ------------------------------------------------------------------
+runminer() {
+  return
+
+  echo running ipfs ...
+  ipfs daemon &
+
+  pushd js
+  echo running ethgateway ...
+  node ethgw.js $egwport \
+                $daemonegwinport \
+                $daemonpubkey \
+                $publishsca \
+                $votesca &
+
+  echo running clientservices ...
+  node clisvcs.js $publishersca &
+  popd
+
+  echo running daemon ...
+  java $JLIB -cp $JARS:./java:. gungadaemon.Daemon \
+      $daemonuiport \
+      $daemonegwinport \
+      $egwport \
+      $ethgwpubkey \
+      $extkeyfilepath \
+      $intkeyfilepath \
+      $pubsdbfilepath \
+      $hwmdbfilepath \
+      $ipfscachedir &
+
+  echo running lottery process ...
+  pushd ../ethereum/lottery
+  node lotto.js "$votessca"
+  popd
+}
+
+# main -----------------------------------------------------------------------
+source env.sh
+
 commd=$1
 
-# Publisher on rinkeby network
-SCA="0x55A3A250fd420C5da0fa3343621216167A6D62aD"
+daemonuiport=8804
+daemonegwinport=8805
+egwport=8806
 
-source env.sh
+extkeyfilepath=$HOME/.ethereum/keystore/UTC--...
+intkeyfilepath=$extkeyfilepath
+
+pubsdbfilepath=publications.db
+hwmdbfilepath=hwm.db
+
+ipfscachedir=$HOME/temp
 
 if [ -z $commd ]
 then
-  echo running daemon ...
-  java $JLIB -cp $JARS:./java:. gungadaemon.Daemon ethwalletpath=$HOME/.gungadin/UTC--2016-10-23T18-50-15.853386528Z--8e9342eb769c4039aaf33da739fb2fc8af9afdc1
-fi
+  daemonpubkey=
+  ethgwpubkey=
+  publishersca=
+  votesca=
 
-if [ "$commd" = "reactor" ]
-then
-  echo running reactor ...
-  java $JLIB -cp $JARS:./java:. gungadaemon.Reactor $SCA
+  echo running geth ...
+  geth --syncmode light --cache 4096 --ws --wsorigins "*" > geth.out 2>&1 &
+
+  runminer
 fi
 
 if [ "$commd" = "test" ]
 then
-  echo running tests ...
+  account0="0x8c34f41f1cf2dfe2c28b1ce7808031c40ce26d38"
+  account1="0x147b61187f3f16583ac77060cbc4f711ae6c9349"
+  treasurysca="0xF68580C3263FB98C6EAeE7164afD45Ecf6189EbB"
+  membershipsca="0x4Ebf4321A360533AC2D48A713B8f18D341210078"
+  publishersca="0xbEE4730F42fEe0756A3bC6d34C04D8dB17fe1758"
+  votessca="0x14eA1a75a615f3392Ad71F309699e84866fc3C1C"
+
+  ganache-cli --account="0x0bce878dba9cce506e81da71bb00558d1684979711cf2833bab06388f715c01a,100000000000000000000" --account="0xff7da9b82a2bd5d76352b9c385295a430d2ea8f9f6f405a7ced42a5b0e73aad7,100000000000000000000" &
+
+  echo waiting for ganache to initialize ...
+  sleep 5
+
+  echo deploying Treasury ...
+  pushd ../../treasury/scripts
+  node cli.js 0 0 deploy
+  popd
+
+  echo deploying/stocking test Membership contract ...
+  pushd ../ethereum/membership
+  node cli.js 0 0 deploy
+  node cli.js 0 "$membershipsca" setTreasury "$treasurysca"
+  node cli.js 0 "$membershipsca" setApproval "$account0" "true"
+  node cli.js 0 "$membershipsca" paydues 100
+  popd
+
+  echo deploying test Publisher contract ...
+  pushd ../ethereum/publisher
+  node cli.js 0 0 deploy
+  node cli.js 0 "$publishersca" setTreasury "$treasurysca"
+  node cli.js 0 "$publishersca" setMembership "$membershipsca"
+  popd
+
+  echo deploying test Votes contract ...
+  pushd ../ethereum/votes
+  node cli.js 0 0 deploy
+  node cli.js 0 "$votessca" setTreasury "$treasurysca"
+  node cli.js 0 "$votessca" setMembership "$membershipsca"
+  popd
+
+  runminer
 fi
+
