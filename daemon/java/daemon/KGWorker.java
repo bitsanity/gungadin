@@ -16,6 +16,7 @@ import tbox.*;
 public class KGWorker extends WorkerBase
 {
   private Socket client_ = null;
+  private NodeIdentity nodeId_ = null;
   private ACL acl_ = null;
   private IPFS ipfs_ = null;
   private EthGateway gateway_ = null;
@@ -27,18 +28,21 @@ public class KGWorker extends WorkerBase
   private byte[] K_ = null;      // client's public key
   private String id_ = null;     // client.cookie
 
-  private KGWorker() {}
-
-  public KGWorker( Socket client, ACL acl, IPFS ipfs, EthGateway gateway )
+  public KGWorker( Socket client,
+                   NodeIdentity intid,
+                   ACL acl,
+                   IPFS ipfs,
+                   EthGateway gateway )
   {
     super( client );
+    nodeId_ = intid;
     acl_ = acl;
     ipfs_ = ipfs;
     gateway_ = gateway;
   }
 
   // @override
-  private JSONObject replyTo( JSONObject request ) throws Exception
+  public JSONObject replyTo( JSONObject request ) throws Exception
   {
     String method = (String) request.get( "method" );
     JSONArray params = (JSONArray) request.get( "params" );
@@ -74,13 +78,15 @@ public class KGWorker extends WorkerBase
     id_ = (String) request.get( "id" );
 
     if (method.equals( "request" ))
-      try
+      try {
         return handleRequest( request );
-      catch( Exception e )
+      }
+      catch( Exception e ) {
         return errorMessage( ERR_EXCEP,
                              e.getMessage(),
                              "handleRequest() failed",
                              id_ );
+      }
 
     // if arrived here then request is unrecognized so challenge
     return challenge();
@@ -235,7 +241,7 @@ public class KGWorker extends WorkerBase
     // adds 25% overhead, so 3/4 of 2GB is 1.5GB
 
     byte[] reddata = FileUtils.getFileBytes( Paths.get(fpath) );
-    byte[] redkey = NodeIdentity.instance().red();
+    byte[] redkey = nodeId_.red();
 
     JSONObject redwrapped = new JSONObject();
 
@@ -275,7 +281,7 @@ public class KGWorker extends WorkerBase
         throw new Exception( "IPFS failed" );
 
       // only publish the first chunk in a chain
-      if (ii = 0)
+      if (0 == ii)
         gateway_.publish( recippubkey,
                           ipfshash,
                           blkwrapped.toString().getBytes().length );
@@ -289,7 +295,7 @@ public class KGWorker extends WorkerBase
   //
   public static void main( String[] args ) throws Exception
   {
-    KGWorker wkr = new KGWorker( null, null, null, null );
+    KGWorker wkr = new KGWorker( null, null, null, null, null );
 
     Secp256k1 curve = new Secp256k1();
 

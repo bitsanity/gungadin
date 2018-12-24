@@ -76,14 +76,14 @@ public class HWM
   public static void main( String[] args ) throws Exception
   {
     if (null == args || 0 == args.length) {
-      System.out.println( "Usage: <get|set> [hwm]" );
+      System.out.println( "Usage: <fpath> <get|set> [hwm]" );
       return;
     }
 
-    HWM hwm = new HWM();
+    HWM hwm = new HWM( args[0] );
 
-    if (args[0].equalsIgnoreCase("set"))
-      hwm.set( Long.parseLong(args[1]) );
+    if (args[1].equalsIgnoreCase("set"))
+      hwm.set( Long.parseLong(args[2]) );
 
     System.out.println( "HWM: " + hwm.get() );
 

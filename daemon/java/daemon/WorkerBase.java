@@ -77,5 +77,7 @@ public class WorkerBase extends Thread
   }
 
   // subclasses to override this with specific implementations
-  public JSONObject replyTo( JSONObject request ) throws Exception {}
+  public JSONObject replyTo( JSONObject request ) throws Exception {
+    return null;
+  }
 }

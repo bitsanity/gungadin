@@ -5,17 +5,15 @@ runminer() {
   return
 
   echo running ipfs ...
-  ipfs daemon &
+  #ipfs daemon &
 
-  pushd js
   echo running ethgateway ...
-  node ethgw.js $egwport \
-                $daemonegwinport \
-                $daemonpubkey \
-                $publishsca \
-                $votesca &
+  pushd js/ethgateway
+  echo "node ethgw.js $egwport $daemonegwinport $daemonpubkey $publishersca $votessca" &
+  popd
 
   echo running clientservices ...
+  pushd js/clientservices
   node clisvcs.js $publishersca &
   popd
 
@@ -47,16 +45,19 @@ daemonegwinport=8805
 egwport=8806
 
 extkeyfilepath=$HOME/.ethereum/keystore/UTC--...
-intkeyfilepath=$extkeyfilepath
-
+intkeypassphrase="change-on-install"
+intkeyfilepath=nodeid.blk
 pubsdbfilepath=publications.db
 hwmdbfilepath=hwm.db
 
 ipfscachedir=$HOME/temp
 
+daemonpubkey=`java $JLIB -cp $JARS:./java:. gungadaemon.NodeIdentity $intkeypassphrase $intkeyfilepath`
+
+echo daemon internal pubkey: $daemonpubkey
+
 if [ -z $commd ]
 then
-  daemonpubkey=
   ethgwpubkey=
   publishersca=
   votesca=
@@ -76,36 +77,36 @@ then
   publishersca="0xbEE4730F42fEe0756A3bC6d34C04D8dB17fe1758"
   votessca="0x14eA1a75a615f3392Ad71F309699e84866fc3C1C"
 
-  ganache-cli --account="0x0bce878dba9cce506e81da71bb00558d1684979711cf2833bab06388f715c01a,100000000000000000000" --account="0xff7da9b82a2bd5d76352b9c385295a430d2ea8f9f6f405a7ced42a5b0e73aad7,100000000000000000000" &
+  #ganache-cli --account="0x0bce878dba9cce506e81da71bb00558d1684979711cf2833bab06388f715c01a,100000000000000000000" --account="0xff7da9b82a2bd5d76352b9c385295a430d2ea8f9f6f405a7ced42a5b0e73aad7,100000000000000000000" &
 
   echo waiting for ganache to initialize ...
-  sleep 5
+  #sleep 5
 
   echo deploying Treasury ...
   pushd ../../treasury/scripts
-  node cli.js 0 0 deploy
+  #node cli.js 0 0 deploy
   popd
 
   echo deploying/stocking test Membership contract ...
   pushd ../ethereum/membership
-  node cli.js 0 0 deploy
-  node cli.js 0 "$membershipsca" setTreasury "$treasurysca"
-  node cli.js 0 "$membershipsca" setApproval "$account0" "true"
-  node cli.js 0 "$membershipsca" paydues 100
+  #node cli.js 0 0 deploy
+  #node cli.js 0 "$membershipsca" setTreasury "$treasurysca"
+  #node cli.js 0 "$membershipsca" setApproval "$account0" "true"
+  #node cli.js 0 "$membershipsca" paydues 100
   popd
 
   echo deploying test Publisher contract ...
   pushd ../ethereum/publisher
-  node cli.js 0 0 deploy
-  node cli.js 0 "$publishersca" setTreasury "$treasurysca"
-  node cli.js 0 "$publishersca" setMembership "$membershipsca"
+  #node cli.js 0 0 deploy
+  #node cli.js 0 "$publishersca" setTreasury "$treasurysca"
+  #node cli.js 0 "$publishersca" setMembership "$membershipsca"
   popd
 
   echo deploying test Votes contract ...
   pushd ../ethereum/votes
-  node cli.js 0 0 deploy
-  node cli.js 0 "$votessca" setTreasury "$treasurysca"
-  node cli.js 0 "$votessca" setMembership "$membershipsca"
+  #node cli.js 0 0 deploy
+  #node cli.js 0 "$votessca" setTreasury "$treasurysca"
+  #node cli.js 0 "$votessca" setMembership "$membershipsca"
   popd
 
   runminer

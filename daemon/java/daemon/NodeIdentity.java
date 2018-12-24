@@ -33,7 +33,7 @@ public class NodeIdentity
     readKey();
   }
 
-  private static overwrite( byte[] newred, String pphr, String fpath )
+  private static void overwrite( byte[] newred, String pphr, String fpath )
   throws Exception
   {
     NodeIdentity ni = new NodeIdentity( pphr, fpath );
@@ -67,22 +67,16 @@ public class NodeIdentity
     red_ = ByteOps.concat( red1, red2 );
   }
 
-  // usage: <new private key, hex>
   public static void main( String[] args ) throws Exception
   {
-    if (args.length != 3)
-      throw new Exception( "Usage:\n\t<privkey:hex> <passphrase> <filepath>" );
+    // <passphrase> <filepath>
+    if (args.length != 2)
+      throw new Exception( "Usage: <pphrase> <filepath>" );
 
-    byte[] newred = HexString.decode( args[0] );
+    NodeIdentity nid = new NodeIdentity( args[0], args[1] );
 
-    if (    null == newred
-         || 0 == newred.length
-         || 0 == new BigInteger(args[0]).intValue() )
-      throw new Exception( "Invalid private key: " + args[0] );
-
-    NodeIdentity nid = new NodeIdentity( newred, args[1], args[2] );
-
-    nid.saveKey();
+    ECKeyPair eckp = new ECKeyPair( nid.red() );
+    System.out.println( HexString.encode(eckp.publickey()) );
   }
 }
 

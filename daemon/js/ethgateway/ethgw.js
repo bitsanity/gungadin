@@ -3,8 +3,9 @@
 //       account must be shared with the daemon as the key is also the node
 //       identifier in the system
 
-if ( process.argv.length != 8 ) {
+if ( process.argv.length != 7 ) {
   console.log(
+    process.argv.length,
     'Args: <myport> ' +
           '<daemonport> ' +
           '<daemonpubkey> ' +
@@ -92,7 +93,7 @@ http.createServer( (req, resp) => {
   }
 } ).listen( myPort );
 
-function handleMessage( JSONObject cmd )
+function handleMessage( cmd )
 {
   var mth = cmd['method'];
   var msg = cmd['params'][0];
@@ -108,7 +109,7 @@ function handleMessage( JSONObject cmd )
   if ('setHWM' === mth)
     handleNewHWM( msgbod['newhwm'] );
   else if ('publish' === mth)
-    handlePublish( msgbod['recipkey', msgbod['hash'], msgbod['fsize'] );
+    handlePublish( msgbod['recipkey'], msgbod['hash'], msgbod['fsize'] );
   else if ('vote' === mth)
     handleVote( msgbod['blocknum'], msgbod['hash'] );
 }

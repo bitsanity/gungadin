@@ -12,15 +12,12 @@ source env.sh
 if [ -z $commd ]
 then
   echo compiling Java ...
-  javac -g -classpath $JARS:./java:. ./java/gungadaemon/*.java
+  # Note: simplejson uses unchecked or unsafe operations
+  javac -g -classpath $JARS:./java:. ./java/daemon/*.java
 
   echo making dist ...
   pushd ./java
-  jar -cf ../dist/$jarname ./gungadaemon/*.class
-  popd
-  pushd ../ethereum/bindings
-  jar uf ../../daemon/dist/$jarname ./gungadin/membership/*.class
-  jar uf ../../daemon/dist/$jarname ./gungadin/publisher/*.class
+  jar -cf ../dist/$jarname ./daemon/*.class
   popd
 fi
 
@@ -30,7 +27,7 @@ fi
 if [ "$commd" = "clean" ]
 then
   echo cleaning...
-  rm ./java/gungadaemon/*.class
+  rm ./java/daemon/*.class
   rm dist/$jarname
   rm -rf kgserver.log kgserver.properties kgserver.script kgserver.tmp
   rm -rf hwm.log hwm.properties hwm.script hwm.tmp

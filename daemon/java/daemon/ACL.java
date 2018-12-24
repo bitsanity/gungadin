@@ -3,6 +3,8 @@ package daemon;
 import java.sql.*;
 import java.util.*;
 
+import tbox.*;
+
 // Access Control List, a persistent store of keys we recognize.
 
 public class ACL
@@ -83,24 +85,24 @@ public class ACL
 
   // CLI usage:
   //
-  // add a key: add <pubkey hexstring>
+  // add a key: add <dbfile> <pubkey,hex>
   // show keys: ls
-  // remove key: rm <pubkey hexstring>
+  // remove key: rm <dbfile> <pubkey,hex>
   //
   public static void main( String[] args ) throws Exception
   {
-    if (null == args || 0 == args.length)
+    if (null == args || 2 <= args.length)
     {
-      System.out.println( "Usage: <add|ls|rm> [pubkey hexstring]" );
+      System.out.println( "Usage: <fpath> <add|ls|rm> [pubkey hexstring]" );
       return;
     }
 
     byte[] key = null;
 
-    if (    args[0].equalsIgnoreCase("add")
-         || args[0].equalsIgnoreCase("rm") )
+    if (    args[1].equalsIgnoreCase("add")
+         || args[1].equalsIgnoreCase("rm") )
     {
-      key = HexString.decode( args[1] );
+      key = HexString.decode( args[2] );
 
       if (    ((byte)0x02 == key[0] || (byte)0x03 == key[0])
            && 33 != key.length )
@@ -111,19 +113,19 @@ public class ACL
         throw new Exception( "uncompressed key invalid length" );
     }
 
-    if (args[0].equalsIgnoreCase("add"))
+    if (args[1].equalsIgnoreCase("add"))
     {
-      new ACL().addKey( key );
+      new ACL( args[0] ).addKey( key );
     }
 
     if (args[0].equalsIgnoreCase("rm"))
     {
-      new ACL().removeKey( key );
+      new ACL( args[0] ).removeKey( key );
     }
 
-    if (args[0].equalsIgnoreCase("ls"))
+    if (args[1].equalsIgnoreCase("ls"))
     {
-      Vector<String> hkeys = new ACL().list();
+      Vector<String> hkeys = new ACL( args[0] ).list();
       for (String s : hkeys)
         System.out.println( s );
     }

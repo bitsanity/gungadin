@@ -1,6 +1,7 @@
 package daemon;
 
 import java.io.*;
+import java.net.*;
 
 import org.json.simple.*;
 import org.json.simple.parser.*;
@@ -27,10 +28,10 @@ public class EthGateway
     send( makeRpc("setHWM", msg) );
   }
 
-  public void vote( int blocknum, String hashResult ) throws Exception
+  public void vote( long blocknum, String hashResult ) throws Exception
   {
     JSONObject msgbody = new JSONObject();
-    msgbody.put( "blocknum", Integer.toString(blocknum) );
+    msgbody.put( "blocknum", Long.toString(blocknum) );
     msgbody.put( "hash", hashResult );
     String msg = HexString.encode( msgbody.toJSONString().getBytes() );
 
@@ -49,7 +50,7 @@ public class EthGateway
     send( makeRpc("publish", msg) );
   }
 
-  private JSONObject makeRpc( String method, String msg )
+  private String makeRpc( String method, String msg )
   throws Exception
   {
     Secp256k1 curve = new Secp256k1();
@@ -64,7 +65,7 @@ public class EthGateway
     result.put( "method", method );
     result.put( "params", parts );
     result.put( "id", HexString.encode(curve.publicKeyCreate(red_)) );
-    return result;
+    return result.toJSONString();
   }
 
   private void send( String rpcmsg ) throws Exception

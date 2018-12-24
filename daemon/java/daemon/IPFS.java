@@ -5,11 +5,13 @@ import java.net.*;
 import org.json.simple.*;
 import org.json.simple.parser.*;
 
+import tbox.*;
+
 public class IPFS
 {
   private static final String UAGENT = "Mozilla/5.0";
 
-  String fileCacheDir_;
+  private static String fileCacheDir_;
 
   public IPFS( String filecachedir )
   {
@@ -18,8 +20,9 @@ public class IPFS
 
   public static String push( String data ) throws Exception
   {
-    String fname = HexString.encode( SHA256.hash(data.substring(0,1024)) )
-                            .substring( 30 ); // last 2 bytes
+    String fname =
+      HexString.encode( SHA256.hash(data.substring(0,1024).getBytes()) )
+               .substring( 30 ); // last 2 bytes
 
     String tmpfname = fileCacheDir_ + "/" + fname;
 

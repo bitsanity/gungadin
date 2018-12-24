@@ -37,7 +37,7 @@ public class Publications
     }
   }
 
-  public long insert( String ipfs, long blocknum, int logix) throws Exception
+  public void insert( String ipfs, long blocknum, int logix) throws Exception
   {
     if (null == ipfs || 0 == ipfs.length() || 0 >= blocknum)
       throw new Exception( "Invalid INSERT param '" + ipfs +
@@ -45,10 +45,11 @@ public class Publications
 
     String sql =
       "INSERT INTO Publications (IPFSHashStr,BlockNumber,LogIndex) " +
-      "VALUES ('" + ipfs + "'," + blocknum + "," + logix + ")"
+      "VALUES ('" + ipfs + "'," + blocknum + "," + logix + ")";
 
+    Statement stmt = null;
     try {
-      Statement stmt = db_.createStatement();
+      stmt = db_.createStatement();
       stmt.executeUpdate( sql );
     }
     finally {
@@ -84,9 +85,9 @@ public class Publications
   public byte[] nextHash( byte[] nextval ) throws Exception
   {
     if (null != lastResult_)
-      lastResult_ = Kekkac256.hash( ByteOps.concat(lastResult_, nextval) );
+      lastResult_ = Keccak256.hash( ByteOps.concat(lastResult_, nextval) );
     else
-      lastResult_ = Kekkac256.hash( nextval );
+      lastResult_ = Keccak256.hash( nextval );
 
     return lastResult_;
   }
@@ -94,15 +95,15 @@ public class Publications
   public static void main( String[] args ) throws Exception
   {
     String ipfs = args[0];
-    long blocknum = Long.parseLong(args[1]).longValue();
-    int index = Integer.parseInt(args[2]).intValue();
+    long blocknum = Long.parseLong(args[1]);
+    int index = Integer.parseInt(args[2]);
 
     if (null == args || 0 == args.length) {
-      System.out.println( "Usage: <ipfshash> <blocknum> <logindex>" );
+      System.out.println( "Usage: <fpath> <ipfshash> <blocknum> <logindex>" );
       return;
     }
 
-    Publications pb = new Publications();
+    Publications pb = new Publications( args[0] );
     pb.insert( ipfs, blocknum, index );
 
     org.hsqldb.DatabaseManager.closeDatabases(0);

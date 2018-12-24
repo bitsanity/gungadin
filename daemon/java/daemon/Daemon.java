@@ -1,8 +1,10 @@
 package daemon;
 
 import java.net.ServerSocket;
-import java.nio.Files;
+import java.nio.file.*;
 import java.util.*;
+
+import tbox.*;
 
 public class Daemon
 {
@@ -11,15 +13,16 @@ public class Daemon
   private int egwoutport_;
   private byte[] ethPeerPubkey_;
   private HWM hwm_;
-  private NodeIdentity nodeId_;
+  private String nodeAddr_; // Node's Ethereum address
   private NodeIdentity daemonId_;
   private Publications pubs_;
   private IPFS ipfs_;
+  private ACL acl_;
   private EthGateway gateway_;
 
   public Daemon() {}
 
-  public doDaemonStuff() throws Exception
+  public void doDaemonStuff() throws Exception
   {
     ServerSocket ss = new ServerSocket( uiport_ );
     ServerSocket st = new ServerSocket( egwinport_ );
@@ -29,20 +32,16 @@ public class Daemon
       while( true )
       {
         // thread to listen to the UI
-        new KGWorker( ss.accept(), acl_, ipfs_, gateway_ ).start();
+        new KGWorker( ss.accept(), daemonId_, acl_, ipfs_, gateway_ ).start();
 
         // thread to listen for incoming events from Ethereum
-        Runnable ethgw = () -> new EthListener(
-          st.accept(),
-          ethPeerPubkey_,
-          hwm_,
-          nodeId_,
-          pubs_,
-          ipfs_,
-          gateway_
-        );
-
-        new Thread( ethgw ).start();
+        new EthListener( st.accept(),
+                         ethPeerPubkey_,
+                         hwm_,
+                         nodeAddr_,
+                         pubs_,
+                         ipfs_,
+                         gateway_ ).start();
       }
     }
     catch( Exception e )
@@ -72,16 +71,31 @@ public class Daemon
 
     // specifying pphrase on the command line is a possible security hole
 
-    String pphr = argsMap.get("pphrase");
+    String pphr = argsMap.get( "extpassphrase" );
     if (null == pphr || 0 == pphr.length())
     {
+      System.out.print( "extpassphrase: " );
       Scanner s = new Scanner( System.in );
-      pphr = scanner.next();
-      scanner.close();
+      pphr = s.next();
+      s.close();
 
       if (null == pphr || 0 == pphr.length())
-        throw new Exception( "No passphrase provided." );
+        throw new Exception( "No ext passphrase provided." );
     }
+    argsMap.put( "extpassphrase", pphr );
+
+    pphr = argsMap.get( "intpassphrase" );
+    if (null == pphr || 0 == pphr.length())
+    {
+      System.out.print( "intpassphrase: " );
+      Scanner s = new Scanner( System.in );
+      pphr = s.next();
+      s.close();
+
+      if (null == pphr || 0 == pphr.length())
+        throw new Exception( "No int passphrase provided." );
+    }
+    argsMap.put( "intpassphrase", pphr );
 
     // optional parameters, default values assigned
 
@@ -102,19 +116,20 @@ public class Daemon
 
     // mandatory parameters, crash if not specified
 
-    if (null == egwpeerpubkey || 0 == egwpeerpubkey.length())
+    if (    null == argsMap.get("egwpeerpubkey")
+         || 0 == argsMap.get("egwpeerpubkey").length() )
       throw new Exception( "Need Eth gateway peer's pubkey for comms." );
 
-    if ( !Files.exists(argsMap.get("extkeyfilepath")) )
+    if ( !Files.exists(Paths.get(argsMap.get("extkeyfilepath"))) )
       throw new Exception(
         "Node key " + argsMap.get("extkeyfilepath") + " does not exist." );
 
-    if ( !Files.exists(argsMap.get("intkeyfilepath")) )
+    if ( !Files.exists(Paths.get(argsMap.get("intkeyfilepath"))) )
       throw new Exception(
         "IPC key " + argsMap.get("intkeyfilepath") + " does not exist." );
 
-    if (    !Files.exists(argsMap.get("ipfscachedir"))
-         || !Files.isDirectory(argsMap.get("ipfscachedir")) )
+    if (    !Files.exists(Paths.get(argsMap.get("ipfscachedir")))
+         || !Files.isDirectory(Paths.get(argsMap.get("ipfscachedir"))) )
       throw new Exception(
         "IPFS cache dir must exist: " + argsMap.get("ipfscachedir") );
 
@@ -124,26 +139,35 @@ public class Daemon
       "\tegwinport = " + argsMap.get("egwinport") + "\n" +
       "\tegwoutport = " + argsMap.get("egwoutport") + "\n" +
       "\tegwpeerpubkey = " + argsMap.get("egwpeerpubkey") + "\n" +
-      "\tpphrase = " + argsMap.get("passphrase") + "\n" +
       "\textkeyfilepath = " + argsMap.get("extkeyfilepath") + "\n" +
+      "\tintpassphrase = " + argsMap.get("intpassphrase") + "\n" +
       "\tintkeyfilepath = " + argsMap.get("intkeyfilepath") + "\n" +
       "\tpubsdbfilepath = " + argsMap.get("pubsdbfilepath") + "\n" +
       "\thwmdbfilepath = " + argsMap.get("hwmdbfilepath") + "\n" +
       "\tipfscachedir = " + argsMap.get("ipfscachedir") + "\n" +
+      "\taclfilepath = " + argsMap.get("aclfilepath") + "\n"
     );
 
     Daemon matt = new Daemon();
-    matt.uiport_ = uiport;
-    matt.egwinport_ = egwinport;
-    matt.egwoutport_ = egwoutport;
+
+    matt.uiport_ = Integer.parseInt( argsMap.get("uiport") );
+    matt.egwinport_ = Integer.parseInt( argsMap.get("egwinport") );
+    matt.egwoutport_ = Integer.parseInt( argsMap.get("egwoutport") );
     matt.ethPeerPubkey_ = HexString.decode( argsMap.get("egwpeerpubkey") );
-    matt.nodeId_ = new NodeIdentity( argsMap.get("extkeyfilepath") );
     matt.hwm_ = new HWM( argsMap.get("hwmdbfilepath") );
     matt.pubs_ = new Publications( argsMap.get("pubsdbfilepath") );
     matt.ipfs_ = new IPFS( argsMap.get("ipfscachedir") );
-    matt.gateway_ =
-       new EthGateway( egwoutport,
-                       new NodeIdentity(argsMap.get("intkeyfilepath")).red() );
+    matt.acl_ = new ACL( argsMap.get("aclfilepath") );
+
+    // nodeId is node's ethereum address. key file is the keystore file
+    // format: "UTC--date--address"
+    matt.nodeAddr_ = argsMap.get("extkeyfilepath").split("--")[2];
+
+    NodeIdentity internalId =
+      new NodeIdentity( argsMap.get("intpassphrase"),
+                        argsMap.get("intkeyfilepath") );
+
+    matt.gateway_ = new EthGateway( egwoutport, internalId.red() );
 
     matt.doDaemonStuff();
   }

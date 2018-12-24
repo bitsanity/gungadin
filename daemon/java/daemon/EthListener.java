@@ -1,5 +1,6 @@
 package daemon;
 
+import java.net.*;
 import java.util.Arrays;
 
 import org.json.simple.*;
@@ -16,31 +17,32 @@ import tbox.*;
 public class EthListener extends WorkerBase
 {
   // require peer to sign messages sent into here with this pubkey
-  private byte[] peerpubkey_;
+  private byte[] daemonpubkey_;
 
-  private NodeIdentity extId_; // for sharding need last char of address
+  private String nodeAddr_; // for sharding need last char of address
   private Publications pubs_;
+  private HWM hwm_;
   private IPFS ipfs_;
   private EthGateway gateway_;
 
   public EthListener( Socket client,
-                      byte[] peerpubkey,
+                      byte[] daemonpubkey,
                       HWM hwm,
-                      NodeIdentity extid,
+                      String nodeAddr,
                       Publications pubs,
                       IPFS ipfs,
                       EthGateway gateway ) throws Exception
   {
     super( client );
-    peerpubkey_ = peerpubkey;
+    daemonpubkey_ = daemonpubkey;
     hwm_ = hwm;
-    extId_ = extid;
+    nodeAddr_ = nodeAddr;
     pubs_ = pubs;
     ipfs_ = ipfs;
     gateway_ = gateway;
 
     // ok to back up some blocks to make sure we get every event
-    long newhwm = hwm_.get() - 100;
+    long newhwm = hwm_.get() - 100L;
     if (0L > newhwm)
       newhwm = 0L;
 
@@ -54,16 +56,17 @@ public class EthListener extends WorkerBase
     // public key of the communicating peer, not a person/subject
     byte[] pubkey = HexString.decode( (String)request.get( "id" ) );
 
-    if (null == pubkey || (pubkey.length() != 33 && pubkey.length() != 65))
+    if (null == pubkey || (pubkey.length != 33 && pubkey.length != 65))
       return errorMessage( ERR_BAD_G,
           "Improper pubkey",
           "null or invalid length",
-          (pubkey == null) ? "<null>" : pubkey );
+          ((pubkey == null) ? "<null>" : HexString.encode(pubkey)) );
 
-    if (!Arrays.equals(pubkey, peerpubkey_))
+    if (!Arrays.equals(pubkey, daemonpubkey_))
       return errorMessage( ERR_BAD_G,
+        "Key mismatch",
         "Peer pubkey does not match expected key",
-        "expected: " + HexString.encode(peerpubkey_) +
+        "expected: " + HexString.encode(daemonpubkey_) +
         "received: " + ((pubkey == null) ? "<null>"
                                          : HexString.encode(pubkey)) );
 
@@ -78,7 +81,7 @@ public class EthListener extends WorkerBase
     // remember: Ethereum uses Keccak instead of SHA256
     if (!curve.verifyECDSA( HexString.decode(sig),
                             Keccak256.hash(msg.getBytes()),
-                            HexString.decode(pubkey) ))
+                            pubkey ))
       return errorMessage( ERR_BAD_G,
         "Bad signature", "ECDSA verify fail",
         (pubkey == null) ? "<null>" : HexString.encode(pubkey) );
@@ -91,8 +94,8 @@ public class EthListener extends WorkerBase
     {
       JSONArray evts = (JSONArray) request.get( "events" );
 
-      for (int ii = 0; ii < evts.length(); ii++) {
-        JSONObj obj = (JSONObject) evts.get( ii );
+      for (int ii = 0; ii < evts.size(); ii++) {
+        JSONObject obj = (JSONObject) evts.get( ii );
         String pk = (String) obj.get( "pubkey" );
         String ip = (String) obj.get( "ipfshash" );
         String bn = (String) obj.get( "blocknum" );
@@ -100,18 +103,19 @@ public class EthListener extends WorkerBase
 
         handlePublished( pk,
                          ip,
-                         Long.parse(bn).longValue(),
-                         Integer.parseInt(li).intValue() );
+                         Long.parseLong(bn),
+                         Integer.parseInt(li) );
       }
     }
 
-    if (method.equals( "Fee" )) handleFee( json.get("fee") );
+    if (method.equals( "Fee" )) handleFee( (String)json.get("fee") );
+    return null;
   }
 
-  private handlePublished( String pubkey,
-                           String ipfshash,
-                           long blockNum,
-                           int logindex ) throws Exception
+  private void handlePublished( String pubkey,
+                                String ipfshash,
+                                long blockNum,
+                                int logindex ) throws Exception
   {
     System.out.println( "receiverpubkey: " + pubkey );
     System.out.println( "ipfshash: " + ipfshash );
@@ -119,8 +123,7 @@ public class EthListener extends WorkerBase
     // ipfshash is in base58 but our address is hexstring, so convert ipfshash
     // to hexstring by hashing it, then determine if last character matches
 
-    String myaddr = new EthereumAddress( extId_.red() ).toString();
-    char myLast = myaddr.charAt( myaddr.length() - 1 );
+    char myLast = nodeAddr_.charAt( nodeAddr_.length() - 1 );
 
     String ipfsrehashed =
       new String( Keccak256.hash(ipfshash.getBytes()) ).toUpperCase();
