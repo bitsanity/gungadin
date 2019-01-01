@@ -169,7 +169,7 @@ public class Daemon
 
     matt.gateway_ = new EthGateway( egwoutport, internalId.red() );
 
-    matt.doDaemonStuff();
+    //matt.doDaemonStuff();
   }
 }
 

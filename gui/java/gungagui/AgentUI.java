@@ -17,6 +17,11 @@ public class AgentUI implements ActionListener, Runnable
 {
   private JFrame jf_ = null;
   private ChallengePanel cp_ = null;
+  private JFileChooser jfc_;
+  private JLabel idLabel_;
+  private JLabel receiverLabel_;
+  private JLabel uploadedLabel_;
+
   private boolean isScanning_ = false;
   private boolean isSignIn_ = false;
 
@@ -25,6 +30,7 @@ public class AgentUI implements ActionListener, Runnable
   private ECKeyPair aA_;
   private byte[] K_; // user
   private byte[] R_; // recipient
+  private byte[] G_; // gatekeeper
 
   private Socket sock_;
   private static int port_;
@@ -101,13 +107,17 @@ public class AgentUI implements ActionListener, Runnable
           else
           {
             K_ = kp.key();
-            System.out.println( "user is: " + HexString.encode(K_) );
+            G_ = HexString.decode( (String)response.get("id") );
+            String pubk = HexString.encode( K_ );
+            idLabel_.setText( pubk );
           }
         }
         else
         {
           R_ = kp.key();
-          System.out.println( "receiver is: " + HexString.encode(R_) );
+          String pubk = HexString.encode( R_ );
+          receiverLabel_.setText( pubk );
+          stopScanning();
         }
       }
       catch( Exception e )
@@ -150,7 +160,33 @@ public class AgentUI implements ActionListener, Runnable
       }
       else if (cmd.startsWith("Approve"))
       {
-        System.out.println( cmd );
+        String red = "upload&fpath=" + jfc_.getSelectedFile().toString() +
+                     "&recipient=" + HexString.encode( R_ );
+        System.out.println( red );
+
+        ECIES ec = new ECIES( aA_.privatekey(), G_ );
+        String black = ec.encrypt( red.getBytes() );
+        Secp256k1 curve = new Secp256k1();
+        byte[] sig = curve.signECDSA( SHA256.hash(black.getBytes()),
+                                      aA_.privatekey() );
+
+        JSONObject request = new JSONObject();
+        request.put( "method", "request" );
+        JSONArray params = new JSONArray();
+        JSONObject blob = new JSONObject();
+        blob.put( "req", black );
+        blob.put( "sig", Base64.encode(sig) );
+        params.add( blob );
+        request.put( "params", params );
+        request.put( "id", HexString.encode(K_) );
+
+        JSONObject response = doRPC( request );
+        JSONObject err = (JSONObject) response.get( "error" );
+        if (err != null)
+          uploadedLabel_.setText( err.toString() );
+        else
+          uploadedLabel_.setText( "uploaded: " +
+            jfc_.getSelectedFile().toString() );
       }
     }
     catch( Exception x )
@@ -251,38 +287,61 @@ public class AgentUI implements ActionListener, Runnable
 
   private JPanel commandPanel()
   {
-    JPanel result = new JPanel();
-    BoxLayout bl = new BoxLayout( result, BoxLayout.X_AXIS );
-    result.setLayout( bl );
+    String blank = "                                   ";
 
-    result.add( Box.createHorizontalGlue() );
+    JPanel result = new JPanel( new GridBagLayout() );
+    GridBagConstraints gbc = new GridBagConstraints();
+    gbc.insets = new Insets( 10, 10, 10, 10 );
+
+    gbc.gridx = 0; gbc.gridy = 0;
+    gbc.anchor = GridBagConstraints.LINE_END;
     JButton sender = new JButton( "Sign In ..." );
     sender.addActionListener( this );
-    result.add( sender );
+    result.add( sender, gbc );
 
-    result.add( Box.createHorizontalGlue() );
+    Font mono = new Font( "Monospaced", Font.PLAIN, 12 );
+
+    gbc.gridx++;
+    idLabel_ = new JLabel( blank );
+    idLabel_.setFont( mono );
+    gbc.anchor = GridBagConstraints.LINE_START;
+    result.add( idLabel_, gbc );
+
+    gbc.gridx--; gbc.gridy++;
+    gbc.anchor = GridBagConstraints.LINE_END;
     JButton recver = new JButton( "Set Receiver ..." );
     recver.addActionListener( this );
-    result.add( recver );
+    result.add( recver, gbc );
 
-    result.add( Box.createHorizontalGlue() );
+    gbc.gridx++;
+    receiverLabel_ = new JLabel( blank );
+    receiverLabel_.setFont( mono );
+    gbc.anchor = GridBagConstraints.LINE_START;
+    result.add( receiverLabel_, gbc );
+
+    gbc.gridx--; gbc.gridy++;
     JButton fileup = new JButton( "Send File ..." );
+    gbc.anchor = GridBagConstraints.LINE_END;
     fileup.addActionListener( this );
-    result.add( fileup );
+    result.add( fileup, gbc );
 
-    result.add( Box.createHorizontalGlue() );
+    gbc.gridx++;
+    uploadedLabel_ = new JLabel( blank );
+    uploadedLabel_.setFont( mono );
+    gbc.anchor = GridBagConstraints.LINE_START;
+    result.add( uploadedLabel_, gbc );
 
     return result;
   }
 
   private JPanel fileUploadPanel()
   {
-    JFileChooser jfc = new JFileChooser();
-    jfc.addActionListener( this );
+    jfc_ = new JFileChooser();
+    jfc_.addActionListener( this );
 
     JPanel result = new JPanel();
     result.setLayout( new BorderLayout() );
-    result.add( jfc, BorderLayout.CENTER );
+    result.add( jfc_, BorderLayout.CENTER );
 
     return result;
   }
@@ -314,7 +373,7 @@ public class AgentUI implements ActionListener, Runnable
 
     String port = parms.get("port");
     if (null == port || 0 == port.length())
-      parms.put( "port", "8008" );
+      throw new Exception( "daemon's ui port is required param" );
 
     port_ = Integer.parseInt( parms.get("port") );
 
