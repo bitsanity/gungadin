@@ -21,7 +21,7 @@ public class IPFS
   public static String push( String data ) throws Exception
   {
     String fname =
-      HexString.encode( SHA256.hash(data.substring(0,1024).getBytes()) )
+      HexString.encode( SHA256.hash(data.getBytes()) )
                .substring( 30 ); // last 2 bytes
 
     String tmpfname = fileCacheDir_ + "/" + fname;

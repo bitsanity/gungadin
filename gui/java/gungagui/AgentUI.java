@@ -27,10 +27,10 @@ public class AgentUI implements ActionListener, Runnable
 
   private Message chmsg_;
 
-  private ECKeyPair aA_;
+  private ECKeyPair aA_; // agent
+  private byte[] G_; // gatekeeper
   private byte[] K_; // user
   private byte[] R_; // recipient
-  private byte[] G_; // gatekeeper
 
   private Socket sock_;
   private static int port_;
@@ -54,7 +54,6 @@ public class AgentUI implements ActionListener, Runnable
         if (null == rsp || 0 == rsp.length()) continue;
 
         rsp = rsp.replaceAll( "\\s", "" );
-        System.out.println( "rsp:\n" + rsp + "\n" );
 
         // parse keymaster response
         MessagePart kp = null;
@@ -101,15 +100,15 @@ public class AgentUI implements ActionListener, Runnable
           JSONObject response = doRPC( toSvr );
 
           // just confirm no error
-          JSONObject err = (JSONObject) response.get( "error" );
-          if (err != null)
-            System.out.println( err.toString() );
+          String err = (String) response.get( "error" );
+          if (err != null && !err.equalsIgnoreCase("null"))
+            System.out.println( err );
           else
           {
             K_ = kp.key();
-            G_ = HexString.decode( (String)response.get("id") );
             String pubk = HexString.encode( K_ );
             idLabel_.setText( pubk );
+            stopScanning();
           }
         }
         else
@@ -162,27 +161,33 @@ public class AgentUI implements ActionListener, Runnable
       {
         String red = "upload&fpath=" + jfc_.getSelectedFile().toString() +
                      "&recipient=" + HexString.encode( R_ );
-        System.out.println( red );
 
         ECIES ec = new ECIES( aA_.privatekey(), G_ );
         String black = ec.encrypt( red.getBytes() );
+
+        System.out.println( "G: " + HexString.encode(G_) + "\n\n" );
+        System.out.println( "A: " + HexString.encode(aA_.publickey()) +
+                            "\n\n" );
+        System.out.println( "black: " + black + "\n\n" );
+
         Secp256k1 curve = new Secp256k1();
         byte[] sig = curve.signECDSA( SHA256.hash(black.getBytes()),
                                       aA_.privatekey() );
 
-        JSONObject request = new JSONObject();
-        request.put( "method", "request" );
         JSONArray params = new JSONArray();
         JSONObject blob = new JSONObject();
         blob.put( "req", black );
         blob.put( "sig", Base64.encode(sig) );
         params.add( blob );
+
+        JSONObject request = new JSONObject();
+        request.put( "method", "request" );
         request.put( "params", params );
-        request.put( "id", HexString.encode(K_) );
+        request.put( "id", "null" );
 
         JSONObject response = doRPC( request );
-        JSONObject err = (JSONObject) response.get( "error" );
-        if (err != null)
+        String err = (String) response.get( "error" );
+        if (err != null && !err.equalsIgnoreCase("null"))
           uploadedLabel_.setText( err.toString() );
         else
           uploadedLabel_.setText( "uploaded: " +
@@ -191,7 +196,7 @@ public class AgentUI implements ActionListener, Runnable
     }
     catch( Exception x )
     {
-      System.out.println( x );
+      x.printStackTrace();
     }
   }
 
@@ -215,6 +220,7 @@ public class AgentUI implements ActionListener, Runnable
     JSONObject err = (JSONObject) response.get( "error" );
 
     Message msg = Message.parse( (String)err.get("data") );
+    G_ = msg.part(0).key();
 
     // agent signs and appends part
     Secp256k1 curve = new Secp256k1();
@@ -240,6 +246,9 @@ public class AgentUI implements ActionListener, Runnable
 
       pw.println( json.toJSONString() );
       String rsp = br.readLine();
+
+      System.out.println( "sent:\n" + json.toJSONString() + "\n\n" );
+      System.out.println( "server replied: \n" + rsp + "\n\n" );
 
       JSONParser parser = new JSONParser();
       fromServer = (JSONObject) parser.parse( rsp );

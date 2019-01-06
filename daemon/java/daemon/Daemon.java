@@ -69,22 +69,7 @@ public class Daemon
         argsMap.put( parts[0], parts[1] );
     }
 
-    // specifying pphrase on the command line is a possible security hole
-
-    String pphr = argsMap.get( "extpassphrase" );
-    if (null == pphr || 0 == pphr.length())
-    {
-      System.out.print( "extpassphrase: " );
-      Scanner s = new Scanner( System.in );
-      pphr = s.next();
-      s.close();
-
-      if (null == pphr || 0 == pphr.length())
-        throw new Exception( "No ext passphrase provided." );
-    }
-    argsMap.put( "extpassphrase", pphr );
-
-    pphr = argsMap.get( "intpassphrase" );
+    String pphr = argsMap.get( "intpassphrase" );
     if (null == pphr || 0 == pphr.length())
     {
       System.out.print( "intpassphrase: " );
@@ -94,7 +79,10 @@ public class Daemon
 
       if (null == pphr || 0 == pphr.length())
         throw new Exception( "No int passphrase provided." );
+
+      System.out.print( "intpassphrase: " + pphr );
     }
+
     argsMap.put( "intpassphrase", pphr );
 
     // optional parameters, default values assigned
@@ -162,14 +150,13 @@ public class Daemon
     // nodeId is node's ethereum address. key file is the keystore file
     // format: "UTC--date--address"
     matt.nodeAddr_ = argsMap.get("extkeyfilepath").split("--")[2];
-
-    NodeIdentity internalId =
+    matt.daemonId_ =
       new NodeIdentity( argsMap.get("intpassphrase"),
                         argsMap.get("intkeyfilepath") );
 
-    matt.gateway_ = new EthGateway( egwoutport, internalId.red() );
+    matt.gateway_ = new EthGateway( egwoutport, matt.daemonId_.red() );
 
-    //matt.doDaemonStuff();
+    matt.doDaemonStuff();
   }
 }
 

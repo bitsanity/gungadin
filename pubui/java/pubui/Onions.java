@@ -23,7 +23,7 @@ public class Onions
 
   public int count()
   {
-    return onions_.size;
+    return onions_.length;
   }
 
   public String pickRandom()

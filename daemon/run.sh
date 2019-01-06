@@ -2,10 +2,9 @@
 
 # Functions ------------------------------------------------------------------
 runminer() {
-  return
 
   echo running ipfs ...
-  #ipfs daemon &
+  echo ipfs daemon &
 
   echo running ethgateway ...
   pushd js/ethgateway
@@ -14,24 +13,26 @@ runminer() {
 
   echo running clientservices ...
   pushd js/clientservices
-  node clisvcs.js $publishersca &
+  echo node clisvcs.js $publishersca &
   popd
 
   echo running daemon ...
-  java $JLIB -cp $JARS:./java:. gungadaemon.Daemon \
-      $daemonuiport \
-      $daemonegwinport \
-      $egwport \
-      $ethgwpubkey \
-      $extkeyfilepath \
-      $intkeyfilepath \
-      $pubsdbfilepath \
-      $hwmdbfilepath \
-      $ipfscachedir &
+  java $JLIB -cp $JARS:./java:. daemon.Daemon \
+      intpassphrase=$intkeypassphrase \
+      uiport=$daemonuiport \
+      egwinport=$daemonegwinport \
+      egwoutport=$egwport \
+      egwpeerpubkey=$ethgwpubkey \
+      extkeyfilepath=$extkeyfilepath \
+      intkeyfilepath=$intkeyfilepath \
+      pubsdbfilepath=$pubsdbfilepath \
+      hwmdbfilepath=$hwmdbfilepath \
+      aclfilepath=$aclfilepath \
+      ipfscachedir=$ipfscachedir
 
   echo running lottery process ...
   pushd ../ethereum/lottery
-  node lotto.js "$votessca"
+  echo node lotto.js "$votessca"
   popd
 }
 
@@ -43,35 +44,43 @@ commd=$1
 daemonuiport=8804
 daemonegwinport=8805
 egwport=8806
+ethgwpubkey=04blahblahblah
 
-extkeyfilepath=$HOME/.ethereum/keystore/UTC--...
+extkeyfilepath=$HOME/.ethereum/keystore/UTC--2016-10-23T18-50-15.853386528Z--8e9342eb769c4039aaf33da739fb2fc8af9afdc1
 intkeypassphrase="change-on-install"
 intkeyfilepath=nodeid.blk
 pubsdbfilepath=publications.db
+aclfilepath=acl.db
 hwmdbfilepath=hwm.db
 
 ipfscachedir=$HOME/temp
 
-daemonpubkey=`java $JLIB -cp $JARS:./java:. gungadaemon.NodeIdentity $intkeypassphrase $intkeyfilepath`
+daemonpubkey=`java $JLIB -cp $JARS:./java:. daemon.NodeIdentity $intkeypassphrase $intkeyfilepath`
 
 echo daemon internal pubkey: $daemonpubkey
 
 if [ -z $commd ]
 then
-  ethgwpubkey=
   publishersca=
   votesca=
 
   echo running geth ...
-  geth --syncmode light --cache 4096 --ws --wsorigins "*" > geth.out 2>&1 &
+  #geth --syncmode light --cache 4096 --ws --wsorigins "*" > geth.out 2>&1 &
 
   runminer
+fi
+
+if [ "$commd" = "key" ]
+then
+  # <dbfile> add <pubkey>
+  java $JLIB -cp $JARS:./java:. daemon.ACL $2 add $3
 fi
 
 if [ "$commd" = "test" ]
 then
   account0="0x8c34f41f1cf2dfe2c28b1ce7808031c40ce26d38"
   account1="0x147b61187f3f16583ac77060cbc4f711ae6c9349"
+  ethgwpubkey="somepubkey"
   treasurysca="0xF68580C3263FB98C6EAeE7164afD45Ecf6189EbB"
   membershipsca="0x4Ebf4321A360533AC2D48A713B8f18D341210078"
   publishersca="0xbEE4730F42fEe0756A3bC6d34C04D8dB17fe1758"

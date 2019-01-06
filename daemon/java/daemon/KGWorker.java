@@ -82,6 +82,7 @@ public class KGWorker extends WorkerBase
         return handleRequest( request );
       }
       catch( Exception e ) {
+        e.printStackTrace();
         return errorMessage( ERR_EXCEP,
                              e.getMessage(),
                              "handleRequest() failed",
@@ -140,6 +141,10 @@ public class KGWorker extends WorkerBase
       return challenge();
     }
 
+    System.out.println( "G:" + HexString.encode(ch_.pubKey()) );
+    System.out.println( "A:" + HexString.encode(A_) );
+    System.out.println( "req: " + req64 );
+
     // decrypt request
     ECIES ec = new ECIES( ch_.privKey(), A_ );
     byte[] req = ec.decrypt( req64 );
@@ -155,9 +160,11 @@ public class KGWorker extends WorkerBase
     }
     catch( Exception e )
     {
+      e.printStackTrace();
+
       return errorMessage( ERR_EXCEP,
-                           e.getMessage(),
-                           null,   // data
+                           e.toString(),
+                           e.getMessage(),   // data
                            null ); // id
     }
 
@@ -200,9 +207,7 @@ public class KGWorker extends WorkerBase
     for (int ii = 1; ii < parts.length; ii++)
     {
       String[] nv = parts[ii].split("=");
-
       if (nv.length != 2) continue;
-
       parms.put( nv[0], nv[1] );
     }
 
@@ -247,13 +252,12 @@ public class KGWorker extends WorkerBase
 
     ECKeyPair pair = new ECKeyPair( redkey );
     redwrapped.put( "send", HexString.encode(pair.publickey()) );
-
     redwrapped.put( "tstamp", new Date().getTime() / 1000 ); // sec, not ms
     redwrapped.put( "fname", new File(fpath).getName() );
     redwrapped.put( "red", Base64.encode(reddata) );
 
     ECIES encryptor = new ECIES( redkey, recippubkey );
-    String blktxt = encryptor.encrypt( redwrapped.toString().getBytes() );
+    String blktxt = encryptor.encrypt( redwrapped.toJSONString().getBytes() );
 
     String[] chunks = Chunkifier.chunkify( blktxt );
     String next = "null";
@@ -265,17 +269,16 @@ public class KGWorker extends WorkerBase
       data.put( "black", chunks[ii] );
 
       byte[] msg = data.toJSONString().getBytes();
-      byte[] sig =
-        new Secp256k1().signECDSARecoverable( SHA256.hash(msg), redkey );
+      byte[] sig = new Secp256k1().signSchnorr( SHA256.hash(msg), redkey );
 
       if (null == sig || 0 == sig.length)
-        throw new Exception( "recoverable signature failed." );
+        throw new Exception( "schnorr signature failed." );
 
       JSONObject blkwrapped = new JSONObject();
-      blkwrapped.put( "data", data.toJSONString() );
+      blkwrapped.put( "data", data );
       blkwrapped.put( "sig", Base64.encode(sig) );
 
-      String ipfshash = ipfs_.push( blkwrapped.toString() );
+      String ipfshash = ipfs_.push( blkwrapped.toJSONString() );
 
       if (null == ipfshash || 0 == ipfshash.length())
         throw new Exception( "IPFS failed" );
@@ -284,7 +287,7 @@ public class KGWorker extends WorkerBase
       if (0 == ii)
         gateway_.publish( recippubkey,
                           ipfshash,
-                          blkwrapped.toString().getBytes().length );
+                          blkwrapped.toJSONString().getBytes().length );
       else
         next = ipfshash;
     }

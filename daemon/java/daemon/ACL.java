@@ -91,7 +91,7 @@ public class ACL
   //
   public static void main( String[] args ) throws Exception
   {
-    if (null == args || 2 <= args.length)
+    if (null == args || 2 >= args.length)
     {
       System.out.println( "Usage: <fpath> <add|ls|rm> [pubkey hexstring]" );
       return;

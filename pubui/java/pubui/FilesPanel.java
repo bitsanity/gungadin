@@ -3,9 +3,11 @@ package pubui;
 import java.awt.*;
 import java.awt.event.*;
 import java.io.*;
+import java.net.*;
 import java.nio.*;
 import java.nio.file.*;
 import java.text.*;
+import java.time.*;
 import java.util.*;
 import javax.net.*;
 import javax.swing.*;
@@ -19,6 +21,8 @@ import com.subgraph.orchid.*;
 
 import org.json.simple.*;
 import org.json.simple.parser.*;
+
+import tbox.*;
 
 public class FilesPanel extends JPanel
                         implements ActionListener,
@@ -114,7 +118,10 @@ public class FilesPanel extends JPanel
 
   public void dateChanged( DateChangeEvent dce )
   {
-    refreshList();
+    try {
+      refreshList();
+    }
+    catch( Exception e ) { e.printStackTrace(); }
   }
 
   public void valueChanged( ListSelectionEvent lse )
@@ -126,25 +133,29 @@ public class FilesPanel extends JPanel
 
   public void actionPerformed( ActionEvent aev )
   {
+    try {
     if (aev.getSource() == decrypt_)
       decryptFile();
     else
       refreshList();
+    }
+    catch( Exception e ) { e.printStackTrace(); } // TODO : report errors
   }
 
-  private void refreshList()
+  private void refreshList() throws Exception
   {
     JSONObject parm0 = new JSONObject();
     parm0.put( "pubkey", RedKey.instance().getPublicKey() );
     String msgStr = HexString.encode( parm0.toJSONString().getBytes() );
-    Secp256k1 curve = new Secp256k1();
 
-    String parm1 = curve.signECDSA( SHA256.hash(msgStr.getBytes()),
-                                    RedKey.instance().get() );
+    Secp256k1 curve = new Secp256k1();
+    // NOTE: clientservices is js/Ethereum, expects Keccak256 instead of SHA2
+    byte[] sig = curve.signECDSA( Keccak256.hash(msgStr.getBytes()),
+                                  RedKey.instance().get() );
 
     JSONArray parms = new JSONArray();
     parms.add( parm0 );
-    parms.add( parm1 );
+    parms.add( HexString.encode(sig) );
 
     JSONObject request = new JSONObject();
     request.put( "method", "getIPFSHashes" );
@@ -199,7 +210,7 @@ public class FilesPanel extends JPanel
       else
         tod = new Date();
 
-      if (dt.after(frm) && !dt.after(to))
+      if (dt.after(frm) && !dt.after(tod))
         listData[ii] = new SimpleDateFormat("yyyy MM dd ").format(dt) +
                        (String)hashes.get(ii);
     }
@@ -232,20 +243,21 @@ public class FilesPanel extends JPanel
     {
       JSONObject blkWrapped = (JSONObject)current.get( "data" );
       byte[] msg = blkWrapped.toJSONString().getBytes();
-      byte[] sig = Base64.decode( (String)blkWrapped.get( "sig" ) );
+      byte[] sig = tbox.Base64.decode( (String)blkWrapped.get( "sig" ) );
 
-      if ( !curve.verifyECDSARecoverable(
+      if ( !curve.verifySchnorr(
         sig, SHA256.hash(msg), RedKey.instance().getPublicKeyBytes()) )
         throw new Exception( "bad signature" );
 
-      senderpubkey = curve.recoverPublicKey( SHA256.hash(msg), sig );
+      senderpubkey = curve.recoverSchnorr( SHA256.hash(msg), sig );
       if (null == senderpubkey)
         throw new Exception( "failed to recover sender key" );
 
       JSONObject data = (JSONObject)current.get( "data" );
       blackBuffer.append( (String)data.get("black") );
 
-      if (next == null && next.equalsIgnoreCase("null") || next.length == 0)
+      String next = (String) data.get( "next" );
+      if (next == null && next.equalsIgnoreCase("null") || next.length() == 0)
         break;
 
       current = getChunk( (String)data.get("next") );
@@ -269,7 +281,7 @@ public class FilesPanel extends JPanel
     }
   }
 
-  private JSONObject getChunk( String ipfshash )
+  private JSONObject getChunk( String ipfshash ) throws Exception
   {
     URL url = new URL( Endpoints.instance().pickRandom() + ipfshash );
 

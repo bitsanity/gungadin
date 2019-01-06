@@ -26,7 +26,7 @@ public class Endpoints
 
   public int count()
   {
-    return endpoints_.size;
+    return endpoints_.length;
   }
 
   public String pickRandom()
