@@ -120,7 +120,7 @@ public class AccountPanel extends JPanel implements ActionListener
 
         try {
           byte[] fbytes = Files.readAllBytes( file.toPath() );
-          String contents = new String( fbytes );
+          String contents = new String( fbytes ).trim();
           makePublicKey( contents );
         }
         catch( Exception e ) {
@@ -138,7 +138,7 @@ public class AccountPanel extends JPanel implements ActionListener
         makePublicKey( blackKey_.getText() );
       }
       catch( Exception e ) {
-        System.err.println( e.toString() );
+        e.printStackTrace();
       }
     }
   }
@@ -152,6 +152,7 @@ public class AccountPanel extends JPanel implements ActionListener
     if (0 < pin.length())
     {
       byte[] red = BIP38.decrypt( black, pin );
+      if( null == red ) throw new Exception( "bad decrypt" );
       RedKey.instance().set( red );
       pubkey_.setText( RedKey.instance().getPublicKey() );
     }
@@ -182,10 +183,7 @@ public class AccountPanel extends JPanel implements ActionListener
                    options[1] );
 
     if (0 == retval)
-    {
-      String pins = new String( pin.getPassword() );
-      return pins;
-    }
+      return new String( pin.getPassword() ).trim();
 
     return null;
   }

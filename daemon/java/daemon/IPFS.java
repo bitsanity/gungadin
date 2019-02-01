@@ -1,7 +1,12 @@
 package daemon;
 
 import java.io.*;
-import java.net.*;
+
+import io.ipfs.api.*;
+import io.ipfs.cid.*;
+import io.ipfs.multihash.Multihash;
+import io.ipfs.multiaddr.MultiAddress;
+
 import org.json.simple.*;
 import org.json.simple.parser.*;
 
@@ -9,117 +14,32 @@ import tbox.*;
 
 public class IPFS
 {
-  private static final String UAGENT = "Mozilla/5.0";
+  private io.ipfs.api.IPFS ipfs_;
 
-  private static String fileCacheDir_;
-
-  public IPFS( String filecachedir )
+  public IPFS() throws Exception
   {
-    fileCacheDir_ = filecachedir;
+    ipfs_ = new io.ipfs.api.IPFS( "/ip4/127.0.0.1/tcp/5001" );
   }
 
-  public static String push( String data ) throws Exception
+  public String push( String data ) throws Exception
   {
-    String fname =
-      HexString.encode( SHA256.hash(data.getBytes()) )
-               .substring( 30 ); // last 2 bytes
+    NamedStreamable.ByteArrayWrapper file =
+      new NamedStreamable.ByteArrayWrapper( data.getBytes() );
 
-    String tmpfname = fileCacheDir_ + "/" + fname;
-
-    try (PrintStream out = new PrintStream(new FileOutputStream(tmpfname))) {
-      out.print( data );
-    }
-
-    String result = pushFile( tmpfname );
-
-    if (!(new java.io.File(tmpfname)).delete())
-      System.err.println( "WARN: failed to delete: " + tmpfname );
-
-    return result;
+    return ipfs_.add( file ).get( 0 ).hash.toString();
   }
 
-  public static String pushFile( String fpath ) throws Exception
+  public boolean saveLocal( String ipfsHash ) throws Exception
   {
-    String result = null;
+    Multihash filePointer = Multihash.fromBase58( ipfsHash );
+    ipfs_.pin.add( filePointer );
 
-    System.out.println( "IPFS.pushFile pushing " + fpath );
-
-    URL url = new URL( "http://localhost:5001/api/v0/add" +
-                       "?quieter=true&progress=false&pin=false&path=" +
-                       fpath.toString() );
-
-    HttpURLConnection cx = (HttpURLConnection) url.openConnection();
-    cx.setRequestMethod( "GET" );
-    cx.setRequestProperty( "User-Agent", UAGENT );
-
-    int response = cx.getResponseCode();
-    if (response != 200) throw new Exception("IPFS add returned: " + response);
-
-    BufferedReader in =
-      new BufferedReader(new InputStreamReader(cx.getInputStream()));
-
-    String inputLine;
-    StringBuffer buff = new StringBuffer();
-
-    while ((inputLine = in.readLine()) != null)
-      buff.append(inputLine);
-
-    in.close();
-
-    // strip off the http header
-
-    result = buff.toString();
-    int ix = result.indexOf( "\n\n" );
-    result = result.substring( ix + 2 );
-
-    // {
-    //   "Name": "<string>"
-    //   "Hash": "<string>"
-    //   "Bytes": "<int64>"
-    // }
-    JSONObject reply = (JSONObject)( new JSONParser().parse(result) );
-
-    result = (String)reply.get( "Hash" );
-    return result;
-  }
-
-  public static boolean saveLocal( String ipfsHash ) throws Exception
-  {
-    boolean result = true;
-
-    String saveas = fileCacheDir_ + "/" + ipfsHash;
-
-    System.out.println( "IPFS.saveLocal saving " + saveas );
-
-    URL url = new URL( "http://localhost:5001/api/v0/get?" +
-                       "arg=" + ipfsHash +
-                       "&output=" + saveas );
-
-    HttpURLConnection cx = (HttpURLConnection) url.openConnection();
-    cx.setRequestMethod( "GET" );
-    cx.setRequestProperty( "User-Agent", UAGENT );
-
-    int response = cx.getResponseCode();
-
-    if (response != 200) result = false;
-
-    pushFile( saveas );
-
-    return result;
+    return true;
   }
 
   public static void main( String[] args ) throws Exception
   {
-    if (null == args || 2 > args.length)
-    {
-      System.out.println( "Usage:\n" +
-        "To push a file to IPFS and print its hash:\n" +
-        "\rpush <fpath>\n\n" +
-        "To fetch a file from IPFS and dump to file:\n" +
-        "\rfetch <hash> <fpath>" );
-      return;
-    }
+    System.out.println( "IPFS.main: PASS" );
   }
-
 }
 

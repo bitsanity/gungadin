@@ -247,17 +247,16 @@ public class KGWorker extends WorkerBase
 
     byte[] reddata = FileUtils.getFileBytes( Paths.get(fpath) );
     byte[] redkey = nodeId_.red();
+    ECKeyPair pair = new ECKeyPair( redkey );
 
     JSONObject redwrapped = new JSONObject();
-
-    ECKeyPair pair = new ECKeyPair( redkey );
     redwrapped.put( "send", HexString.encode(pair.publickey()) );
     redwrapped.put( "tstamp", new Date().getTime() / 1000 ); // sec, not ms
     redwrapped.put( "fname", new File(fpath).getName() );
     redwrapped.put( "red", Base64.encode(reddata) );
 
     ECIES encryptor = new ECIES( redkey, recippubkey );
-    String blktxt = encryptor.encrypt( redwrapped.toJSONString().getBytes() );
+    String blktxt = encryptor.encrypt( redwrapped.toString().getBytes() );
 
     String[] chunks = Chunkifier.chunkify( blktxt );
     String next = "null";
@@ -268,7 +267,7 @@ public class KGWorker extends WorkerBase
       data.put( "next", next );
       data.put( "black", chunks[ii] );
 
-      byte[] msg = data.toJSONString().getBytes();
+      byte[] msg = data.toString().getBytes();
       byte[] sig = new Secp256k1().signSchnorr( SHA256.hash(msg), redkey );
 
       if (null == sig || 0 == sig.length)
@@ -278,16 +277,18 @@ public class KGWorker extends WorkerBase
       blkwrapped.put( "data", data );
       blkwrapped.put( "sig", Base64.encode(sig) );
 
-      String ipfshash = ipfs_.push( blkwrapped.toJSONString() );
+      String ipfshash = ipfs_.push( blkwrapped.toString() );
 
       if (null == ipfshash || 0 == ipfshash.length())
         throw new Exception( "IPFS failed" );
+
+      System.out.println( "uploaded: " + ipfshash );
 
       // only publish the first chunk in a chain
       if (0 == ii)
         gateway_.publish( recippubkey,
                           ipfshash,
-                          blkwrapped.toJSONString().getBytes().length );
+                          blkwrapped.toString().getBytes().length );
       else
         next = ipfshash;
     }

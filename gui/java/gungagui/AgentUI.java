@@ -132,9 +132,11 @@ public class AgentUI implements ActionListener, Runnable
     {
       String cmd = aev.getActionCommand();
 
-      if (cmd.startsWith("Sign"))
+      if (cmd.startsWith("Sign")) // "Sign In"
       {
+        System.out.println( "calling init" );
         initSession();
+        System.out.println( "back from init" );
 
         isSignIn_ = true;
         startScanning();
@@ -168,7 +170,6 @@ public class AgentUI implements ActionListener, Runnable
         System.out.println( "G: " + HexString.encode(G_) + "\n\n" );
         System.out.println( "A: " + HexString.encode(aA_.publickey()) +
                             "\n\n" );
-        System.out.println( "black: " + black + "\n\n" );
 
         Secp256k1 curve = new Secp256k1();
         byte[] sig = curve.signECDSA( SHA256.hash(black.getBytes()),
@@ -205,7 +206,11 @@ public class AgentUI implements ActionListener, Runnable
     // close any previously open socket
     try { sock_.close(); } catch( Exception e ) {}
 
+    System.out.println( "Connecting to daemon" );
+
     sock_ = new Socket( "localhost", port_ );
+
+    System.out.println( "Connected to daemon" );
 
     // gatekeeper will respond to an empty request with a challenge
     JSONArray blankArray = new JSONArray();
@@ -246,9 +251,6 @@ public class AgentUI implements ActionListener, Runnable
 
       pw.println( json.toJSONString() );
       String rsp = br.readLine();
-
-      System.out.println( "sent:\n" + json.toJSONString() + "\n\n" );
-      System.out.println( "server replied: \n" + rsp + "\n\n" );
 
       JSONParser parser = new JSONParser();
       fromServer = (JSONObject) parser.parse( rsp );

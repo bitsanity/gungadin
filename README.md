@@ -26,9 +26,9 @@ https://en.wikipedia.org/wiki/Gunga_Din
 
 4. https://github.com/bitsanity/cryptils
 
-5. web3j 2.3.1+
-  * Java version of node.js's web3 library - interface to Ethereum
-  * git clone https://github.com/web3j/web3j
+5. web3
+  * Javascript library interface to Ethereum
+  * npm install web3
   * Apache 2.0 License
 
 6. v4l4j-0.9.1-r507
@@ -38,4 +38,9 @@ https://en.wikipedia.org/wiki/Gunga_Din
 7. webcam-capture-driver-v4l4j-0.3.11
   * git clone https://github.com/sarxos/webcam-capture
   * MIT License
+
+8. IPFS Java API
+  * https://github.com/ipfs/java-ipfs-http-client
+  * MIT License
+  * needs multibase, multiaddr, multihash, cid libraries from /lib dir
 

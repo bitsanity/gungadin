@@ -116,11 +116,6 @@ public class Daemon
       throw new Exception(
         "IPC key " + argsMap.get("intkeyfilepath") + " does not exist." );
 
-    if (    !Files.exists(Paths.get(argsMap.get("ipfscachedir")))
-         || !Files.isDirectory(Paths.get(argsMap.get("ipfscachedir"))) )
-      throw new Exception(
-        "IPFS cache dir must exist: " + argsMap.get("ipfscachedir") );
-
     System.out.println(
       "Daemon:\n" +
       "\tuiport = " + argsMap.get("uiport") + "\n" +
@@ -132,7 +127,6 @@ public class Daemon
       "\tintkeyfilepath = " + argsMap.get("intkeyfilepath") + "\n" +
       "\tpubsdbfilepath = " + argsMap.get("pubsdbfilepath") + "\n" +
       "\thwmdbfilepath = " + argsMap.get("hwmdbfilepath") + "\n" +
-      "\tipfscachedir = " + argsMap.get("ipfscachedir") + "\n" +
       "\taclfilepath = " + argsMap.get("aclfilepath") + "\n"
     );
 
@@ -144,7 +138,7 @@ public class Daemon
     matt.ethPeerPubkey_ = HexString.decode( argsMap.get("egwpeerpubkey") );
     matt.hwm_ = new HWM( argsMap.get("hwmdbfilepath") );
     matt.pubs_ = new Publications( argsMap.get("pubsdbfilepath") );
-    matt.ipfs_ = new IPFS( argsMap.get("ipfscachedir") );
+    matt.ipfs_ = new IPFS();
     matt.acl_ = new ACL( argsMap.get("aclfilepath") );
 
     // nodeId is node's ethereum address. key file is the keystore file

@@ -226,11 +226,16 @@ public class FilesPanel extends JPanel
 
   private void decryptFile() throws Exception
   {
+    String ipfshash = null;
+
     String fhash = list_.getSelectedValue();
     if (null == fhash || 0 == fhash.length())
-      throw new Exception( "no file selected" );
+      ipfshash = getHash();
+    else
+      ipfshash = list_.getSelectedValue().split(" ")[1];
 
-    String ipfshash = list_.getSelectedValue().split(" ")[1];
+    if (null == ipfshash || 0 == ipfshash.length())
+      throw new Exception( "no file selected" );
 
     Secp256k1 curve = new Secp256k1();
 
@@ -241,23 +246,18 @@ public class FilesPanel extends JPanel
     JSONObject current = getChunk( ipfshash );
     while (null != current)
     {
-      JSONObject blkWrapped = (JSONObject)current.get( "data" );
-      byte[] msg = blkWrapped.toJSONString().getBytes();
-      byte[] sig = tbox.Base64.decode( (String)blkWrapped.get( "sig" ) );
-
-      if ( !curve.verifySchnorr(
-        sig, SHA256.hash(msg), RedKey.instance().getPublicKeyBytes()) )
-        throw new Exception( "bad signature" );
+      byte[] sig = tbox.Base64.decode( (String)current.get( "sig" ) );
+      JSONObject data = (JSONObject)current.get( "data" );
+      byte[] msg = data.toJSONString().getBytes();
 
       senderpubkey = curve.recoverSchnorr( SHA256.hash(msg), sig );
       if (null == senderpubkey)
         throw new Exception( "failed to recover sender key" );
 
-      JSONObject data = (JSONObject)current.get( "data" );
       blackBuffer.append( (String)data.get("black") );
 
       String next = (String) data.get( "next" );
-      if (next == null && next.equalsIgnoreCase("null") || next.length() == 0)
+      if (next == null || next.equalsIgnoreCase("null") || next.length() == 0)
         break;
 
       current = getChunk( (String)data.get("next") );
@@ -266,16 +266,26 @@ public class FilesPanel extends JPanel
     if (0 == blackBuffer.length()) throw new Exception( "no data" );
 
     JFileChooser saveas = new JFileChooser();
+    saveas.setDialogTitle( "Please choose a directory to store the file:" );
+
     saveas.setFileHidingEnabled( false ); // allow hidden files
+    saveas.setFileSelectionMode( JFileChooser.DIRECTORIES_ONLY );
     if (saveas.showSaveDialog(this) != JFileChooser.APPROVE_OPTION)
       return;
 
     Path target = saveas.getSelectedFile().toPath();
 
     ECIES decryptor = new ECIES( RedKey.instance().get(), senderpubkey );
-    byte[] red = decryptor.decrypt( blackBuffer.toString() );
 
-    try (FileOutputStream fos = new FileOutputStream(saveas.getSelectedFile()))
+    JSONObject redobj = (JSONObject)(new JSONParser()).parse(
+      new String( decryptor.decrypt(blackBuffer.toString()), "UTF-8") );
+
+    String fname =
+      saveas.getSelectedFile() + "/" + (String)redobj.get("fname");
+
+    byte[] red = tbox.Base64.decode( (String)redobj.get("red") );
+
+    try (FileOutputStream fos = new FileOutputStream(fname))
     {
       fos.write( red );
     }
@@ -307,7 +317,7 @@ public class FilesPanel extends JPanel
       if (null != is) is.close();
     }
 
-    String chunkStr = new String( baos.toByteArray(), "UTF-8" );
+    String chunkStr = baos.toString();
     baos.reset();
 
     if (null == chunkStr || 0 == chunkStr.length())
@@ -316,5 +326,34 @@ public class FilesPanel extends JPanel
     return (JSONObject)(new JSONParser()).parse( chunkStr );
   }
 
+  private String getHash()
+  {
+    JPanel jp = new JPanel();
+    JLabel lbl = new JLabel( Resources.instance().get("HashPrompt") );
+    JTextField hash = new JTextField( 32 );
+    jp.add( lbl );
+    jp.add( hash );
+
+    String[] options = new String[]
+    {
+       Resources.instance().get("OK"),
+       Resources.instance().get("Cancel")
+    };
+
+    int retval = JOptionPane.showOptionDialog(
+                   decrypt_,
+                   jp,
+                   Resources.instance().get("HashPromptTitle"),
+                   JOptionPane.NO_OPTION,
+                   JOptionPane.PLAIN_MESSAGE,
+                   null,
+                   options,
+                   options[1] );
+
+    if (0 == retval)
+      return hash.getText().trim();
+
+    return null;
+  }
 }
 

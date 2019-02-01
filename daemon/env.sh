@@ -8,5 +8,9 @@ JARS=\
 ../lib/javase-3.2.1.jar:\
 ../lib/json-simple-1.1.1.jar:\
 ../lib/tbox.jar:\
-./dist/gungadaemon.jar
-
+./dist/gungadaemon.jar:\
+./dist/cid.jar:\
+./dist/ipfs.jar:\
+./dist/multiaddr.jar:\
+./dist/multibase.jar:\
+./dist/multihash.jar

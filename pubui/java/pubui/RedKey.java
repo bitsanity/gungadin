@@ -6,24 +6,28 @@ public class RedKey
 {
   private static RedKey instance_ = null;
 
-  private byte[] redkey_;
-
-  private RedKey() {}
-
   public static RedKey instance()
   {
     if (null == instance_)
       instance_ = new RedKey();
+
     return instance_;
   }
+
+  private byte[] redkey_;
+
+  private RedKey() {}
 
   public byte[] get()
   {
     return redkey_;
   }
 
-  public void set( byte[] red )
+  public void set( byte[] red ) throws Exception
   {
+    Secp256k1 curve = new Secp256k1();
+    if (!curve.privateKeyIsValid(red))
+      throw new Exception( "bad key" );
     redkey_ = red;
   }
 

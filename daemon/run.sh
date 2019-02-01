@@ -4,7 +4,7 @@
 runminer() {
 
   echo running ipfs ...
-  echo ipfs daemon &
+  echo ipfs daemon --enable-pubsub-experiment &
 
   echo running ethgateway ...
   pushd js/ethgateway
@@ -17,7 +17,7 @@ runminer() {
   popd
 
   echo running daemon ...
-  java $JLIB -cp $JARS:./java:. daemon.Daemon \
+  echo java $JLIB -cp $JARS:./java:. daemon.Daemon \
       intpassphrase=$intkeypassphrase \
       uiport=$daemonuiport \
       egwinport=$daemonegwinport \
