@@ -1,9 +1,11 @@
-pragma solidity ^0.4.21;
+pragma solidity ^0.5.3;
 
 contract MembershipMock {
 
   bool public approved_;
   bool public isMember_;
+
+  constructor() public {}
 
   function approvals( address who ) public view returns (bool)
   {
