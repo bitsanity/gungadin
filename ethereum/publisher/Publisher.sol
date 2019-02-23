@@ -1,6 +1,5 @@
-pragma solidity ^0.4.25;
+pragma solidity ^0.5.3;
 
-// assume basic ERC20 compatibility
 interface Token {
   function transfer( address to, uint amount ) external;
   function transferFrom( address from, address to, uint amount ) external;
@@ -12,16 +11,16 @@ interface Membership {
 
 contract Owned
 {
-  address public owner;
+  address payable public owner;
   constructor() public { owner = msg.sender; }
+
+  function changeOwner( address payable newOwner ) isOwner public {
+    owner = newOwner;
+  }
 
   modifier isOwner {
     require( msg.sender == owner );
     _;
-  }
-
-  function changeOwner( address newOwner ) isOwner public {
-    owner = newOwner;
   }
 }
 
@@ -33,7 +32,7 @@ contract Publisher is Owned
 
   Membership public membership;
 
-  address public treasury;
+  address payable public treasury;
   uint256 public fee;
   uint256 dao;
 
@@ -52,7 +51,7 @@ contract Publisher is Owned
     dao = _dao;
   }
 
-  function setTreasury( address _treasury ) isOwner public {
+  function setTreasury( address payable _treasury ) isOwner public {
     treasury = _treasury;
   }
 
@@ -68,9 +67,9 @@ contract Publisher is Owned
     token = Token(_token);
   }
 
-  function publish( bytes receiverpubkey,
-                    string ipfshash,
-                    string redmeta ) payable public {
+  function publish( bytes memory receiverpubkey,
+                    string memory ipfshash,
+                    string memory redmeta ) payable public {
 
     require(    msg.value >= fee
              && membership.isMember(msg.sender) );
@@ -81,9 +80,9 @@ contract Publisher is Owned
     emit Published( receiverpubkey, ipfshash, redmeta );
   }
 
-  function publish_t( bytes receiverpubkey,
-                      string ipfshash,
-                      string redmeta ) public {
+  function publish_t( bytes memory receiverpubkey,
+                      string memory ipfshash,
+                      string memory redmeta ) public {
 
     require( membership.isMember(msg.sender) );
 

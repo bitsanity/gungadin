@@ -27,7 +27,7 @@ fi
 
 echo ""
 echo deploying Votes
-node cli.js 0 0 deploy
+node cli.js 0 1 0 deploy
 
 echo ""
 echo deploying MembershipMock
@@ -35,11 +35,11 @@ node deployMock.js
 
 echo ""
 echo linking MembershipMock to Votes contract
-node cli.js 0 $SCA setMembership $MOCK
+node cli.js 0 1 $SCA setMembership $MOCK
 
 echo ""
 echo setting fee to something non-zero
-node cli.js 0 $SCA setFee 1
+node cli.js 0 1 $SCA setFee 1
 
 echo ""
 echo setting mock to return true for ismember and approved
@@ -47,7 +47,7 @@ node setMock.js $MOCK "true" "true"
 
 echo ""
 echo vote
-node cli.js 0 $SCA vote 1 "ipfshash1"
+node cli.js 0 1 $SCA vote 1 "hash1"
 
 echo ""
 echo setting mock to return false for ismember and true for approved
@@ -55,7 +55,7 @@ node setMock.js $MOCK "false" "true"
 
 echo ""
 echo vote "(should fail)"
-node cli.js 0 $SCA vote 2 "ipfshash2"
+node cli.js 0 1 $SCA vote 2 "hash2"
 
 echo ""
 echo setting mock to return true for ismember and false for approved
@@ -63,8 +63,8 @@ node setMock.js $MOCK "true" "false"
 
 echo ""
 echo vote "(should fail)"
-node cli.js 0 $SCA vote 3 "ipfshash3"
+node cli.js 0 1 $SCA vote 3 "hash3"
 
 echo ""
 echo resulting events
-node cli.js 0 $SCA events
+node cli.js 0 1 $SCA events

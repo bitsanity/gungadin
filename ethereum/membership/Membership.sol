@@ -1,34 +1,37 @@
-// 0.4.21+commit.dfe3193c.Emscripten.clang
-pragma solidity ^0.4.25;
+pragma solidity ^0.5.3;
 
 interface Token {
   function transfer( address to, uint amount ) external;
+  function transferFrom( address from, address to, uint quantity ) external;
 }
 
 contract Owned
 {
-  address public owner;
+  address payable public owner;
+  constructor() public { owner = msg.sender; }
+
+  function changeOwner( address payable newOwner ) isOwner public {
+    owner = newOwner;
+  }
 
   modifier isOwner {
     require( msg.sender == owner );
     _;
   }
-
-  constructor() public { owner = msg.sender; }
-  function changeOwner( address newOwner ) isOwner public { owner = newOwner; }
 }
 
 contract Membership is Owned
 {
   event Approval( address indexed member, bool status );
-  event Fee( uint256 fee );
   event Receipt( address indexed member, uint256 amount );
+  event ReceiptTokens( address indexed member, uint256 amount );
 
   mapping( address => bool ) public approvals;
-  mapping( address => uint256 ) public balances;
 
-  address public treasury;
+  address payable public treasury;
   uint256 public fee;
+  Token   public token;
+  uint256 public tokenFee;
   uint256 dao;
 
   constructor() public {
@@ -37,34 +40,51 @@ contract Membership is Owned
 
   function setFee( uint256 _fee ) isOwner public {
     fee = _fee;
-    emit Fee( fee );
   }
 
   function setDao( uint256 _dao ) isOwner public {
     dao = _dao;
   }
 
-  function setTreasury( address _treasury ) isOwner public {
+  function setTreasury( address payable _treasury ) isOwner public {
     treasury = _treasury;
   }
 
-  function setApproval( address member, bool status ) isOwner public {
-    approvals[ member] = status;
-    emit Approval( member, status );
+  function setToken( address _token ) isOwner public {
+    token = Token(_token);
   }
 
-  function isMember( address _addr ) constant public returns (bool) {
-    return approvals[_addr] && 0 < balances[_addr];
+  function setTokenFee( uint _tfee ) isOwner public {
+    tokenFee = _tfee;
   }
 
-  function() payable public {
-    require( approvals[msg.sender] && msg.value >= fee );
-    balances[msg.sender] += msg.value;
+  function setApproval( address _member, bool _status ) isOwner public {
+    approvals[_member] = _status;
+    emit Approval( _member, _status );
+  }
+
+  function isMember( address _addr ) view public returns (bool) {
+    return approvals[_addr];
+  }
+
+  function() payable external {
+    require( msg.value >= fee, "Insufficient value." );
 
     if (treasury != address(0))
       treasury.transfer( msg.value - msg.value / dao );
 
     emit Receipt( msg.sender, msg.value );
+  }
+
+  function payWithTokens() public {
+    require( token != Token(0) && tokenFee > 0, "Token not set up." );
+
+    token.transferFrom( msg.sender, address(this), tokenFee );
+
+    if (treasury != address(0))
+      token.transfer( treasury, tokenFee - tokenFee / dao );
+
+    emit ReceiptTokens( msg.sender, tokenFee );
   }
 
   function withdraw( uint256 amount ) isOwner public {

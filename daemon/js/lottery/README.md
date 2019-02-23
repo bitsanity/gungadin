@@ -1,17 +1,17 @@
 # lottery
 
-Subsystem of gungadin interfacing with an Ethereum client such as geth via the
-javascript web3 api
+Subsystem of gungadin interfacing with an Ethereum client such as geth using
+the javascript web3 api
 
 Functions:
 
 * watches the Votes contract on the Ethereum blockchain
 * executes a Lottery for all nodes that correctly voted on block N-x, where
-N is the latest Ethereum block number and x is the number of blocks we wait
-to allow all the nodes to vote
+  N is the latest Ethereum block number and x is the number of blocks we wait
+  to allow all the nodes to vote
 * determines a winner for the lottery
 * ensures the winner voted "correctly" according to the majority vote for
-that block
+  that block
 * issues the lottery winnings
 
 Notes:

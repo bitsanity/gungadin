@@ -1,15 +1,9 @@
-// NOTES:
-//
-// 1. script uses hardcoded gasPrice -- CHECK ethgasstation.info
-
 const fs = require('fs');
 const Web3 = require('web3');
 const web3 =
   new Web3(new Web3.providers.HttpProvider("http://localhost:8545"));
 //new Web3(new Web3.providers.WebsocketProvider("ws://localhost:8545"));
 //new Web3(new Web3.providers.WebsocketProvider("ws://localhost:8546"));
-
-const MYGASPRICE = '' + 1 * 1e9;
 
 function getABI() {
   return JSON.parse(
@@ -76,7 +70,7 @@ const cmds =
 
 function usage() {
   console.log(
-    '\nUsage:\n$ node cli.js <acctindex> <SCA> <command> [arg]*\n',
+    '\nUsage:\n$ node cli.js <acctindex> <gprice> <SCA> <command> [arg]*\n',
      'Commands:\n',
      '\tchown <new owner eoa> |\n',
      '\tdeploy |\n',
@@ -90,7 +84,7 @@ function usage() {
   );
 }
 
-var cmd = process.argv[4];
+var cmd = process.argv[5];
 
 let found = false;
 for (let ii = 0; ii < cmds.length; ii++)
@@ -102,7 +96,8 @@ if (!found) {
 }
 
 var ebi = process.argv[2];
-var sca = process.argv[3];
+var gprice = '' + (process.argv[3] * 1e9);
+var sca = process.argv[4];
 
 var eb;
 web3.eth.getAccounts().then( (res) => {
@@ -113,7 +108,7 @@ web3.eth.getAccounts().then( (res) => {
 
     con
       .deploy({data:getBinary()} )
-      .send({from: eb, gas: 1452525, gasPrice: MYGASPRICE}, (err, txhash) => {
+      .send({from: eb, gas: 1452525, gasPrice: gprice}, (err, txhash) => {
         if (txhash) console.log( "send txhash: ", txhash );
       } )
       .on('error', (err) => { console.log("err: ", err); })
@@ -132,10 +127,10 @@ web3.eth.getAccounts().then( (res) => {
 
     if (cmd == 'chown')
     {
-      let addr = process.argv[5];
+      let addr = process.argv[6];
       checkAddr(addr);
       con.methods.changeOwner( addr )
-                 .send( {from: eb, gas: 30000, gasPrice: MYGASPRICE} );
+                 .send( {from: eb, gas: 30000, gasPrice: gprice} );
     }
 
     if (cmd == 'events')
@@ -151,45 +146,45 @@ web3.eth.getAccounts().then( (res) => {
 
     if (cmd == 'publish')
     {
-      let pubkey = process.argv[5];
-      let ipfshash = process.argv[6];
+      let pubkey = process.argv[7];
+      let ipfshash = process.argv[8];
       con.methods.publish( pubkey, ipfshash )
-                 .send( {from: eb, gas: 100000, gasPrice: MYGASPRICE} );
+                 .send( {from: eb, gas: 100000, gasPrice: gprice} );
     }
     if (cmd == 'sendTok')
     {
-      let recip = process.argv[5];
+      let recip = process.argv[6];
       checkAddr( recip );
-      let qty = process.argv[6];
+      let qty = process.argv[7];
       con.methods.sendTok( recip, qty )
-                 .send( {from: eb, gas: 100000, gasPrice: MYGASPRICE} );
+                 .send( {from: eb, gas: 100000, gasPrice: gprice} );
     }
     if (cmd == 'setFee')
     {
-      let newfee = process.argv[5];
+      let newfee = process.argv[6];
       con.methods.setFee( newfee )
-                 .send( {from: eb, gas: 100000, gasPrice: MYGASPRICE} );
+                 .send( {from: eb, gas: 100000, gasPrice: gprice} );
     }
     if (cmd == 'setMembership')
     {
-      let mbrship = process.argv[5];
+      let mbrship = process.argv[6];
       checkAddr( mbrship );
       con.methods.setMembership( mbrship )
-                 .send( {from: eb, gas: 120000, gasPrice: MYGASPRICE} )
-      .catch( err => { console.log } );
+                 .send( {from: eb, gas: 120000, gasPrice: gprice} )
+      .catch( err => { console.log(err) } );
     }
     if (cmd == 'setTreasury')
     {
-      let trs = process.argv[5];
+      let trs = process.argv[6];
       checkAddr( trs );
       con.methods.setTreasury( trs )
-                 .send( {from: eb, gas: 120000, gasPrice: MYGASPRICE} );
+                 .send( {from: eb, gas: 120000, gasPrice: gprice} );
     }
     if (cmd == 'withdraw')
     {
-      let amt = process.argv[5];
+      let amt = process.argv[6];
       con.methods.withdraw( amt )
-                 .send( {from: eb, gas: 120000, gasPrice: MYGASPRICE} );
+                 .send( {from: eb, gas: 120000, gasPrice: gprice} );
     }
   }
 } );

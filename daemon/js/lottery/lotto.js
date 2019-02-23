@@ -18,7 +18,8 @@ const web3 =
 
 function getABI() {
   return JSON.parse(
-    fs.readFileSync('../build/Votes_sol_Votes.abi').toString() );
+    fs.readFileSync('../../../ethereum/votes/build/Votes_sol_Votes.abi')
+      .toString() );
 }
 
 var votes = new web3.eth.Contract( getABI(), process.argv[2] );

@@ -1,19 +1,18 @@
-pragma solidity ^0.4.21;
+pragma solidity ^0.5.3;
 
 interface Membership {
   function isMember( address who ) external returns (bool);
 }
 
-// assume ERC20 compatibility
 interface Token {
   function transfer( address to, uint amount ) external;
   function transferFrom( address from, address to, uint amount ) external;
 }
 
 contract Owned {
-  address public owner_;
+  address payable public owner_;
   constructor() public { owner_ = msg.sender; }
-  function changeOwner( address newOwner ) isOwner public {
+  function changeOwner( address payable newOwner ) isOwner public {
     owner_ = newOwner;
   }
 
@@ -29,64 +28,65 @@ contract Votes is Owned {
               uint    indexed blocknum,
               string          hash );
 
-  Membership public membership_;
-  address    public treasury_;
-  uint256    public fee_;
-  uint256 dao_;
+  Membership      public membership_;
+  address payable public treasury_;
+  Token           public token_;
 
+  uint256 public fee_;
   uint256 public tokenFee_;
-  Token   public token_;
+  uint256 public dao_;
 
   constructor() public {
     dao_ = uint256(100);
-  }
-
-  function setFee( uint _newfee ) isOwner public {
-    fee_ = _newfee;
-  }
-
-  function setDao( uint _dao ) isOwner public {
-    dao_ = _dao;
   }
 
   function setMembership( address _contract ) isOwner public {
     membership_ = Membership( _contract );
   }
 
-  function setTreasury( address _treasury ) isOwner public {
+  function setTreasury( address payable _treasury ) isOwner public {
     treasury_ = _treasury;
-  }
-
-  function setTokenFee( uint256 _fee ) isOwner public {
-    tokenFee_ = _fee;
   }
 
   function setToken( address _token ) isOwner public {
     token_ = Token(_token);
   }
 
-  function vote( uint _blocknum, string _hash ) payable public {
-    require(    fee_ != 0
-             && msg.value >= fee_
-             && membership_.isMember(msg.sender) );
+  function setFee( uint _newfee ) isOwner public {
+    fee_ = _newfee;
+  }
+
+  function setTokenFee( uint256 _fee ) isOwner public {
+    tokenFee_ = _fee;
+  }
+
+  function setDao( uint _dao ) isOwner public {
+    dao_ = _dao;
+  }
+
+  function vote( uint _blocknum, string memory _hash ) payable public {
+    require( msg.value >= fee_ );
 
     if (treasury_ != address(0))
       treasury_.transfer( msg.value - msg.value / dao_ );
 
-    emit Vote( msg.sender, _blocknum, _hash );
+    vote_int( _blocknum, _hash );
   }
 
-  function vote_t( uint blocknum, string ipfshash ) public {
-
-    require( membership_.isMember(msg.sender) );
-
+  function vote_t( uint _blocknum, string memory _hash ) public {
     token_.transferFrom( msg.sender, address(this), tokenFee_ );
 
     if (treasury_ != address(0)) {
       token_.transfer( treasury_, tokenFee_ - tokenFee_/dao_ );
     }
 
-    emit Vote( msg.sender, blocknum, ipfshash );
+    vote_int( _blocknum, _hash );
+  }
+
+  function vote_int( uint _blocknum, string memory _hash ) internal {
+    require( membership_.isMember(msg.sender) );
+
+    emit Vote( msg.sender, _blocknum, _hash );
   }
 
   function withdraw( uint amt ) isOwner public {

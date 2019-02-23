@@ -8,7 +8,7 @@ runminer() {
 
   echo running ethgateway ...
   pushd js/ethgateway
-  echo "node ethgw.js $egwport $daemonegwinport $daemonpubkey $publishersca $votessca" &
+  echo node ethgw.js $egwport $daemonegwinport $daemonpubkey $publishersca $votessca $acctindex $acctpass &
   popd
 
   echo running clientservices ...
@@ -57,12 +57,13 @@ ipfscachedir=$HOME/temp
 
 daemonpubkey=`java $JLIB -cp $JARS:./java:. daemon.NodeIdentity $intkeypassphrase $intkeyfilepath`
 
-echo daemon internal pubkey: $daemonpubkey
-
 if [ -z $commd ]
 then
-  publishersca=
-  votesca=
+  membershipsca="0x5D1710Ec045AEcb93B7968d016bD15699560237a"
+  publishersca="0x9bc3024548c184b40c30489bB684D1Ae01582dEC"
+  votesca="0xC6F5fD8356f54E1CE115b68A44042209b6252DFf"
+  acctindex=8
+  acctpass="blah blah blah"
 
   echo running geth ...
   #geth --syncmode light --cache 4096 --ws --wsorigins "*" > geth.out 2>&1 &
@@ -85,11 +86,13 @@ then
   membershipsca="0x4Ebf4321A360533AC2D48A713B8f18D341210078"
   publishersca="0xbEE4730F42fEe0756A3bC6d34C04D8dB17fe1758"
   votessca="0x14eA1a75a615f3392Ad71F309699e84866fc3C1C"
+  acctindex=0
+  acctpass="testpassword"
 
   #ganache-cli --account="0x0bce878dba9cce506e81da71bb00558d1684979711cf2833bab06388f715c01a,100000000000000000000" --account="0xff7da9b82a2bd5d76352b9c385295a430d2ea8f9f6f405a7ced42a5b0e73aad7,100000000000000000000" &
 
   echo waiting for ganache to initialize ...
-  #sleep 5
+  sleep 10
 
   echo deploying Treasury ...
   pushd ../../treasury/scripts

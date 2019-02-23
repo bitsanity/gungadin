@@ -1,15 +1,9 @@
-// NOTES:
-//
-// 1. script uses hardcoded gasPrice -- CHECK ethgasstation.info
-
 const fs = require('fs');
 const Web3 = require('web3');
 const web3 =
   new Web3(new Web3.providers.HttpProvider("http://localhost:8545"));
 //new Web3(new Web3.providers.WebsocketProvider("ws://localhost:8545"));
 //new Web3(new Web3.providers.WebsocketProvider("ws://localhost:8546"));
-
-const MYGASPRICE = '' + 1 * 1e9;
 
 function getABI() {
   return JSON.parse(
@@ -44,25 +38,20 @@ function shorten(addr) {
 
 function printEvent(evt) {
 
-  if (evt.event == 'Fee' ) {
-    var decoded = web3.eth.abi.decodeParameters(
-                    ["uint256"], evt.raw.data );
-
-    console.log( "Fee: " + decoded['0'] );
-  }
-  else if (evt.event == 'Approval' ) {
-    var decoded = web3.eth.abi.decodeParameters(
-                    ["address", "bool"], evt.raw.data );
-
-    console.log( "Approval\nmember: " + decoded['0'] +
-                 "\nstatus: " + decoded['1'] );
+  if (evt.event == 'Approval' ) {
+    let member = web3.eth.abi.decodeParameter( "address", evt.raw.topics[1] );
+    let astats = web3.eth.abi.decodeParameter( "bool", evt.raw.data );
+    console.log( "Approval member: " + member + " = " + astats );
   }
   else if (evt.event == 'Receipt' ) {
-    var decoded = web3.eth.abi.decodeParameters(
-                    ["address", "uint256"], evt.raw.data );
-
-    console.log( "Receipt\nmember: " + decoded['0'] +
-                 "\namount: " + decoded['1'] );
+    let member = web3.eth.abi.decodeParameter( "address", evt.raw.topics[1] );
+    let qty = web3.eth.abi.decodeParameter( "uint256", evt.raw.data );
+    console.log( "Receipt member: " + member + ", amount: " + qty );
+  }
+  else if (evt.event == 'ReceiptTokens' ) {
+    let member = web3.eth.abi.decodeParameter( "address", evt.raw.topics[1] );
+    let qty = web3.eth.abi.decodeParameter( "uint256", evt.raw.data );
+    console.log( "ReceiptTokens member: " + member + ", amount: " + qty );
   }
   else {
     console.log( evt );
@@ -78,16 +67,20 @@ const cmds =
    'balance',
    'isMember',
    'paydues',
+   'payWithTokens',
    'setApproval',
    'setFee',
+   'setToken',
+   'setTokenFee',
    'setTreasury',
    'sendTok',
+   'variables',
    'withdraw'
   ];
 
 function usage() {
   console.log(
-    '\nUsage:\n$ node cli.js <acctindex> <SCA> <command> [arg]*\n',
+    '\nUsage:\n$ node cli.js <acctindex> <gasprice> <SCA> <command> [arg]*\n',
      'Commands:\n',
      '\tchown <new owner eoa> |\n',
      '\tdeploy |\n',
@@ -96,15 +89,22 @@ function usage() {
      '\tbalance <address> |\n',
      '\tisMember <address> |\n',
      '\tpaydues <amountwei> |\n',
+     '\tpayWithTokens |\n',
      '\tsetApproval <address> <true|false> |\n',
      '\tsetFee <new fee wei> |\n',
+     '\tsetToken <toksca> |\n',
+     '\tsetTokenFee <quantity> |\n',
      '\tsetTreasury <sca> |\n',
-     '\tsendTok <address> <quantity> |\n',
+     '\tsendTok <tokensca> <to address> <quantity> |\n',
+     '\tvariables |\n',
      '\twithdraw <amount in wei>\n'
   );
 }
 
-var cmd = process.argv[4];
+var ebi = process.argv[2];
+var gprice = '' + (process.argv[3] * 1e9);
+var sca = process.argv[4];
+var cmd = process.argv[5];
 
 let found = false;
 for (let ii = 0; ii < cmds.length; ii++)
@@ -115,9 +115,6 @@ if (!found) {
   process.exit(1);
 }
 
-var ebi = process.argv[2];
-var sca = process.argv[3];
-
 var eb;
 web3.eth.getAccounts().then( (res) => {
   eb = res[ebi];
@@ -127,15 +124,15 @@ web3.eth.getAccounts().then( (res) => {
 
     con
       .deploy({data:getBinary()} )
-      .send({from: eb, gas: 1452525, gasPrice: MYGASPRICE}, (err, txhash) => {
-        if (txhash) console.log( "send txhash: ", txhash );
+      .send({from: eb, gas: 1000000, gasPrice: gprice}, (err, txhash) => {
+        if (err) console.log( err );
       } )
-      .on('error', (err) => { console.log("err: ", err); })
+      .on('error', (err) => { console.log("borked: ", err); })
       .on('transactionHash', (h) => { console.log( "hash: ", h ); } )
       .on('receipt', (r) => { console.log( 'rcpt: ' + r.contractAddress); } )
       .on('confirmation', (cn, rcpt) => { console.log( 'cn: ', cn ); } )
-      .then( (con) => {
-        console.log( "SCA", con.options.address );
+      .then( (tract) => {
+        console.log( "SCA", tract.options.address );
         process.exit(0);
       } )
       .catch( err => { console.log } );
@@ -146,10 +143,10 @@ web3.eth.getAccounts().then( (res) => {
 
     if (cmd == 'chown')
     {
-      let addr = process.argv[5];
+      let addr = process.argv[6];
       checkAddr(addr);
       con.methods.changeOwner( addr )
-                 .send( {from: eb, gas: 30000, gasPrice: MYGASPRICE} );
+                 .send( {from: eb, gas: 30000, gasPrice: gprice} );
     }
 
     if (cmd == 'events')
@@ -164,7 +161,7 @@ web3.eth.getAccounts().then( (res) => {
 
     if (cmd == 'approval')
     {
-      let addr = process.argv[5];
+      let addr = process.argv[6];
       checkAddr( addr );
 
       con.methods.approval(addr).call().then( res => {
@@ -173,16 +170,16 @@ web3.eth.getAccounts().then( (res) => {
     }
     if (cmd == 'balance')
     {
-      let addr = process.argv[5];
+      let addr = process.argv[6];
       checkAddr( addr );
 
-      con.methods.balance(addr).call().then( res => {
+      web3.eth.getBalance(addr).then( res => {
         console.log( "balance(" + addr + "): " + res );
       } );
     }
     if (cmd == 'isMember')
     {
-      let addr = process.argv[5];
+      let addr = process.argv[6];
       checkAddr( addr );
 
       con.methods.isMember(addr).call().then( res => {
@@ -190,18 +187,23 @@ web3.eth.getAccounts().then( (res) => {
       } );
     }
     if (cmd == 'paydues') {
-      let val = process.argv[5];
-
-      web3.eth.sendTransaction(
-        {from: eb, to: sca, value: val, gas: 100000, gasPrice: MYGASPRICE} )
-      .catch( err => { console.log } );
-    }
-    if (cmd == 'setApproval') {
-      let addr = process.argv[5];
       let val = process.argv[6];
 
+      web3.eth.sendTransaction(
+        {from: eb, to: sca, value: val, gas: 100000, gasPrice: gprice} )
+      .catch( err => { console.log } );
+    }
+    if (cmd == 'payWithTokens') {
+      con.methods.payWithTokens()
+         .send( {from: eb, gas: 100000, gasPrice: gprice} )
+         .catch( err => { console.log } );
+    }
+    if (cmd == 'setApproval') {
+      let addr = process.argv[6];
+      let val = JSON.parse( process.argv[7] );
+
       con.methods.setApproval( addr, val )
-       .send( {from: eb, gas: 100000, gasPrice: MYGASPRICE} )
+       .send( {from: eb, gas: 100000, gasPrice: gprice} )
        .then( receipt => {
           process.exit(0);
         } )
@@ -209,30 +211,66 @@ web3.eth.getAccounts().then( (res) => {
     }
     if (cmd == 'sendTok')
     {
-      let recip = process.argv[5];
-      checkAddr( recip );
-      let qty = process.argv[6];
-      con.methods.sendTok( recip, qty )
-                 .send( {from: eb, gas: 100000, gasPrice: MYGASPRICE} );
+      let tok = process.argv[6];
+      checkAddr( tok );
+      let toaddr = process.argv[7];
+      checkAddr( toaddr );
+      let qty = process.argv[8];
+      con.methods.sendTok( tok, toaddr, qty )
+                 .send( {from: eb, gas: 100000, gasPrice: gprice} );
     }
     if (cmd == 'setFee')
     {
-      let newfee = process.argv[5];
+      let newfee = process.argv[6];
       con.methods.setFee( newfee )
-                 .send( {from: eb, gas: 100000, gasPrice: MYGASPRICE} );
+                 .send( {from: eb, gas: 100000, gasPrice: gprice} );
+    }
+    if (cmd == 'setToken')
+    {
+      let tok = '' + process.argv[6];
+      con.methods.setToken( tok )
+                 .send( {from: eb, gas: 100000, gasPrice: gprice} );
+    }
+    if (cmd == 'setTokenFee')
+    {
+      let newfee = process.argv[6];
+      con.methods.setTokenFee( newfee )
+                 .send( {from: eb, gas: 100000, gasPrice: gprice} );
     }
     if (cmd == 'setTreasury')
     {
-      let trs = process.argv[5];
+      let trs = process.argv[6];
       checkAddr( trs );
       con.methods.setTreasury( trs )
-                 .send( {from: eb, gas: 120000, gasPrice: MYGASPRICE} );
+                 .send( {from: eb, gas: 120000, gasPrice: gprice} );
     }
     if (cmd == 'withdraw')
     {
-      let amt = process.argv[5];
+      let amt = process.argv[6];
       con.methods.withdraw( amt )
-                 .send( {from: eb, gas: 120000, gasPrice: MYGASPRICE} );
+                 .send( {from: eb, gas: 120000, gasPrice: gprice} );
+    }
+    if (cmd == 'variables')
+    {
+      con.methods.owner().call().then( res => {
+        console.log( "owner: " + res );
+      } );
+
+      con.methods.treasury().call().then( res => {
+        console.log( "treasury: " + res );
+      } );
+
+      con.methods.fee().call().then( res => {
+        console.log( "fee: " + res );
+      } );
+
+      con.methods.token().call().then( res => {
+        console.log( "token: " + res );
+      } );
+
+      con.methods.tokenFee().call().then( res => {
+        console.log( "tokenFee: " + res );
+      } );
     }
   }
 } );
