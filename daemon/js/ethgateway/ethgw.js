@@ -10,9 +10,10 @@ if ( process.argv.length != 9 ) {
           '<daemonport> ' +
           '<daemonpubkey> ' +
           '<publsca> ' +
-          '<votesca>' +
-          '<acct index>' +
-          '<acct password>' );
+          '<votesca> ' +
+          '<acct index> ' +
+          '<acct password>',
+    process.argv );
   process.exit( 1 );
 }
 
@@ -26,11 +27,15 @@ const fileSizeFeeWei = 1e6;
 const votingFeeWei = 1e6;
 
 const fs = require( 'fs' );
-const http = require( 'http' );
+const net = require( 'net' );
 const Web3 = require( 'web3' );
 const web3 =
-  new Web3( new Web3.providers.HttpProvider("http://localhost:8545") );
-//new Web3( new Web3.providers.WebsocketProvider("ws://localhost:8546") );
+  new Web3( new Web3.providers.WebsocketProvider("ws://localhost:8546") );
+//new Web3( new Web3.providers.HttpProvider("http://localhost:8545") );
+
+var EC = require( 'elliptic' ).ec;
+var ec = new EC( 'secp256k1' );
+var keythereum = require( 'keythereum' );
 
 var myPort = process.argv[2];
 var daemonPort = process.argv[3];
@@ -40,19 +45,22 @@ var voteSCA = process.argv[6];
 var acctIndex = process.argv[7];
 var acctPass = process.argv[8];
 
+var myPrivkey;
+var myPubkey;
 var myAddress;
 web3.eth.getAccounts().then( arr => {
 
   myAddress = arr[acctIndex];
+  let keyObj = keythereum.importFromFile( myAddress );
+  myPrivkey = keythereum.recover( acctPass, keyObj );
+  let eckp = ec.keyFromPrivate( myPrivkey, "hex" );
+  myPubkey = eckp.getPublic( "hex" );
+  let tempaddr = keythereum.privateKeyToAddress( myPrivkey );
 
-  let msg = 'content not important';
+  console.log( "pubkey: " + myPubkey + "\n" +
+               "config addr: " + myAddress + "\n" +
+               "calc address: " + tempaddr );
 
-  web3.eth.personal.sign( msg, myAddress, acctPass ).then( sig => {
-    myPubkey = web3.eth.personal.ecRecover( msg, sig );
-    let derivedaddress = web3.utils.keccak256( myPubkey ).slice(12,32);
-    console.log( 'ethgw public key:\n\t', myPubkey,
-                 '\n\taddress', derivedAddress );
-  } );
 } );
 
 var publisher = new web3.eth.Contract(
@@ -65,49 +73,52 @@ var votes = new web3.eth.Contract(
     '../../../ethereum/votes/build/Votes_sol_Votes.abi').toString() ),
     voteSCA );
 
-http.createServer( (req, resp) => {
-  resp.on( 'error', (err) => { console.log( 'resp error: ' + err ); } );
+const server = net.createServer( cx => {
 
-  try
-  {
-    if ( req.method != 'POST' ) throw 'only POST supported';
-    let body = [];
+  let rsp = {};
 
-    req.on( 'error', (err) => {
-      console.log( 'request error: ' + err );
-      resp.writeHead( 400, respHeader );
-      resp.end( '{"error" : "' + err + '"}' );
+  cx.on( 'data', data => {
+    try {
+      handleMessage( JSON.parse(data) );
 
-    } ).on( 'data', (data) => {
+      rsp = {
+        "jsonrpc":"2.0",
+        "result":"0",
+        "error":"null",
+        "id":data.id };
+    }
+    catch( err ) {
+      rsp = {
+        "jsonrpc":"2.0",
+        "result":"null",
+        "error": {"code":"1","message":err.name,"data":err.message},
+        "id":data.id };
+    }
 
-      body.push( data );
+    cx.write( JSON.stringify(rsp) );
+  } );
+} );
 
-    } ).on( 'end', () => {
+server.on( 'error', (err) => {
+  console.log(err);
+} );
 
-        body = Buffer.concat( body ).toString();
-        handleMessage( JSON.parse(body) );
-
-        resp.writeHead( 201, { respHeader } );
-        resp.end( '{}' );
-
-    } );
-  }
-  catch( ex )
-  {
-    resp.writeHead( 400, { respHeader } );
-    resp.end( '{"error" : "' + ex + '" }' );
-  }
-} ).listen( myPort );
+server.listen( myPort, () => {
+  console.log( 'ethgw is listening on ' + myPort );
+} );
 
 function handleMessage( cmd )
 {
+  console.log( 'handleMessage:\n' + JSON.stringify(cmd) );
+
   var mth = cmd['method'];
   var msg = cmd['params'][0];
   var sig = cmd['params'][1];
   var pbk  = cmd['id'];
 
-  var signer = web3.eth.personal.ecRecover( msg, sig );
-  if ( !(signer === pbk) || !(signer === daemonPubkey) )
+  var msgHash = web3.utils.sha3( msg );
+  let dpubkey = ec.keyFromPublic( daemonPubkey, 'hex' );
+  if (!dpubkey.verify(msgHash, sig) )
     throw "Daemon signature doesn't match public key.";
 
   var msgbod = JSON.parse( web3.hexToUtf8(msg) );
@@ -174,16 +185,17 @@ function handleVote( blocknum, hash )
 function sendToDaemon( method, msgbody )
 {
   var msg = web3.utils.utf8ToHex( JSON.stringify(msgbody) );
+  let msgHash = web3.utils.sha3( msg );
+  let eckp = ec.keyFromPrivate( myPrivkey, "hex" );
+  let sig = eckp.sign( msgHash );
 
-  web3.eth.personal.sign( msg, myAddress ).then( sig => {
-    var msgparams = [];
-    msgparams.push( msg );
-    msgparams.push( web3.utils.utf8ToHex(sig) );
+  var msgparams = [];
+  msgparams.push( msg );
+  msgparams.push( web3.utils.utf8ToHex(sig) );
 
-    var msg = {};
-    msg['method'] = method;
-    msg['params'] = msgparams;
-    msg['id'] = myPubkey;
-  } );
+  var msg = {};
+  msg['method'] = method;
+  msg['params'] = msgparams;
+  msg['id'] = '' + myPubkey;
 }
 

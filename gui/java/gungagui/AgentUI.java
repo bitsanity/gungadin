@@ -191,8 +191,13 @@ public class AgentUI implements ActionListener, Runnable
         if (err != null && !err.equalsIgnoreCase("null"))
           uploadedLabel_.setText( err.toString() );
         else
+        {
           uploadedLabel_.setText( "uploaded: " +
             jfc_.getSelectedFile().toString() );
+
+          CardLayout cl = (CardLayout)jf_.getContentPane().getLayout();
+          cl.show( jf_.getContentPane(), "CP" );
+        }
       }
     }
     catch( Exception x )

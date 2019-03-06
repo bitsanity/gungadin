@@ -9,7 +9,10 @@ const web3 =
 
 const respHeader = { 'Content-Type' : 'application/json; charset=utf-8' };
 
-var publishSCA = argv[2];
+var EC = require( 'elliptic' ).ec;
+var ec = new EC( 'secp256k1' );
+
+var publishSCA = process.argv[2];
 var publisher = new web3.eth.Contract(
   JSON.parse( fs.readFileSync('../publisher/build/Publisher_sol_Publisher.abi')
                 .toString() ), publishSCA );
@@ -48,15 +51,17 @@ http.createServer( (req, resp) => {
   }
 } ).listen( myPort );
 
-function handleMessage( JSONObject cmd )
+function handleMessage( cmd )
 {
   var mth = cmd['method'];
   var msg = cmd['params'][0];
   var sig = cmd['params'][1];
   var pbk = cmd['id'];
 
-  var signer = web3.eth.personal.ecRecover( msg, sig );
-  if ( !(signer === pbk) ) {
+  // id could be anyone - just confirm they signed using the provided pubkey
+  let msgHash = web3.utils.sha3( msg );
+  let dpubk = ec.keyFromPublic( pbk, 'hex' );
+  if (!dpubk.verify(msgHash,sig)) {
     console.log( "invalid sig by " + pbk );
     return;
   }

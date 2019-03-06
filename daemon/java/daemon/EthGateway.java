@@ -59,7 +59,7 @@ public class EthGateway
 
     JSONArray parts = new JSONArray();
     parts.add( msg );
-    parts.add( sig );
+    parts.add( sigs );
 
     JSONObject result = new JSONObject();
     result.put( "method", method );
@@ -70,11 +70,23 @@ public class EthGateway
 
   private void send( String rpcmsg ) throws Exception
   {
+    System.out.println( "Sending:\n" + rpcmsg + "\non port: " + port_ );
+
     Socket sock = new Socket( "localhost", port_ );
 
     try {
+
       PrintWriter pw = new PrintWriter( sock.getOutputStream(), true );
       pw.println( rpcmsg );
+      pw.flush();
+
+      BufferedReader in = new BufferedReader(
+        new InputStreamReader(sock.getInputStream()) );
+
+      String rsp;
+      while ((rsp = in.readLine()) != null) { }
+      System.out.println( "ethgw replied: " + rsp );
+
     }
     catch( Exception e ) {
       System.out.println( e.getMessage() );

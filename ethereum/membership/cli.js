@@ -207,7 +207,7 @@ web3.eth.getAccounts().then( (res) => {
        .then( receipt => {
           process.exit(0);
         } )
-       .catch( err => { console.log } );
+       .catch( err => { console.log(err) } );
     }
     if (cmd == 'sendTok')
     {

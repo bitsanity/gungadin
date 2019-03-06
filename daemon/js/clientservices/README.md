@@ -6,11 +6,8 @@ Speaks JSON-RPC with any clientui.
 Usual scenario is client wants to scan the events log for all hashes
 associated with a specified public key. Does not use Ethereum account.
 
-## Dev Dependencies
+## Dependencies
 
-1. node.js
-  * https://nodejs.org/
-
-2. ethereum web3 module
-  * https://github.com/ethereum/web3.js/
-
+[node.js (any recent version)](https://nodejs.org/en/)
+[web3 npm module 1.0.0+](https://www.npmjs.com/package/web3)
+[indutny/elliptic 6.4.1](https://github.com/indutny/elliptic)

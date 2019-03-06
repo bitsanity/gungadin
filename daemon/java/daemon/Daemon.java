@@ -108,10 +108,6 @@ public class Daemon
          || 0 == argsMap.get("egwpeerpubkey").length() )
       throw new Exception( "Need Eth gateway peer's pubkey for comms." );
 
-    if ( !Files.exists(Paths.get(argsMap.get("extkeyfilepath"))) )
-      throw new Exception(
-        "Node key " + argsMap.get("extkeyfilepath") + " does not exist." );
-
     if ( !Files.exists(Paths.get(argsMap.get("intkeyfilepath"))) )
       throw new Exception(
         "IPC key " + argsMap.get("intkeyfilepath") + " does not exist." );
@@ -122,7 +118,7 @@ public class Daemon
       "\tegwinport = " + argsMap.get("egwinport") + "\n" +
       "\tegwoutport = " + argsMap.get("egwoutport") + "\n" +
       "\tegwpeerpubkey = " + argsMap.get("egwpeerpubkey") + "\n" +
-      "\textkeyfilepath = " + argsMap.get("extkeyfilepath") + "\n" +
+      "\textaddress = " + argsMap.get("extaddress") + "\n" +
       "\tintpassphrase = " + argsMap.get("intpassphrase") + "\n" +
       "\tintkeyfilepath = " + argsMap.get("intkeyfilepath") + "\n" +
       "\tpubsdbfilepath = " + argsMap.get("pubsdbfilepath") + "\n" +
@@ -140,10 +136,7 @@ public class Daemon
     matt.pubs_ = new Publications( argsMap.get("pubsdbfilepath") );
     matt.ipfs_ = new IPFS();
     matt.acl_ = new ACL( argsMap.get("aclfilepath") );
-
-    // nodeId is node's ethereum address. key file is the keystore file
-    // format: "UTC--date--address"
-    matt.nodeAddr_ = argsMap.get("extkeyfilepath").split("--")[2];
+    matt.nodeAddr_ = argsMap.get("extaddress");
     matt.daemonId_ =
       new NodeIdentity( argsMap.get("intpassphrase"),
                         argsMap.get("intkeyfilepath") );
