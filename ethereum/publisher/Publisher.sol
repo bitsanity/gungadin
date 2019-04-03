@@ -26,7 +26,7 @@ contract Owned
 
 contract Publisher is Owned
 {
-  event Published( bytes indexed receiverpubkey,
+  event Published( string indexed receiverpubkey,
                    string ipfshash,
                    string redmeta );
 
@@ -67,7 +67,7 @@ contract Publisher is Owned
     token = Token(_token);
   }
 
-  function publish( bytes memory receiverpubkey,
+  function publish( string memory receiverpubkey,
                     string memory ipfshash,
                     string memory redmeta ) payable public {
 
@@ -80,7 +80,7 @@ contract Publisher is Owned
     emit Published( receiverpubkey, ipfshash, redmeta );
   }
 
-  function publish_t( bytes memory receiverpubkey,
+  function publish_t( string memory receiverpubkey,
                       string memory ipfshash,
                       string memory redmeta ) public {
 

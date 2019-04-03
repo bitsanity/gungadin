@@ -1,39 +1,71 @@
 #!/bin/bash
 
 # Functions ------------------------------------------------------------------
+
 runminer() {
 
-  echo running ipfs ...
-  echo ipfs daemon --enable-pubsub-experiment &
+  echo -n "Run ipfs daemon? "
+  read -p '[N/y]: ' -n 1 -r
+  echo
+  if [[ $REPLY =~ ^[Yy]$ ]]; then
+    nohup nice ipfs daemon --enable-pubsub-experiment &> $HOME/temp/ipfs.out &
+    sleep 5
+  fi
 
-  echo running ethgateway ...
-  pushd js/ethgateway
-  echo node ethgw.js $egwport $daemonegwinport $daemonpubkey $publishersca $votessca $acctindex $acctpass &
-  popd
+  echo -n "Run ethgateway? "
+  read -p '[N/y]: ' -n 1 -r
+  echo
+  if [[ $REPLY =~ ^[Yy]$ ]]; then
+    pushd js/ethgateway
+    nohup node ethgw.js \
+      $egwport \
+      $daemonegwinport \
+      $daemonpubkey \
+      $publishersca \
+      $votesca \
+      $acctindex \
+      "$acctpass" &> $HOME/temp/ethgw.out &
+    popd
+    sleep 5
+  fi
 
-  echo running clientservices ...
-  pushd js/clientservices
-  echo node clisvcs.js $publishersca &
-  popd
+  echo -n "Run clientservices? "
+  read -p '[N/y]: ' -n 1 -r
+  echo
+  if [[ $REPLY =~ ^[Yy]$ ]]; then
+    pushd js/clientservices
+    #nohup node clisvcs.js $publishersca &> $HOME/temp/clisvcs.out &
+    popd
+    sleep 5
+  fi
 
-  echo running daemon ...
-  echo java $JLIB -cp $JARS:./java:. daemon.Daemon \
-      intpassphrase=$intkeypassphrase \
+  echo -n "Run lottery? "
+  read -p '[N/y]: ' -n 1 -r
+  echo
+  if [[ $REPLY =~ ^[Yy]$ ]]; then
+    pushd ./js/lottery
+    nohup node lotto.js $votessca &> $HOME/temp/lotto.out &
+    popd
+    sleep 5
+  fi
+
+  echo -n "Run gungadaemon? "
+  read -p '[N/y]: ' -n 1 -r
+  echo
+  if [[ $REPLY =~ ^[Yy]$ ]]; then
+    nohup java $JLIB -cp $JARS:./java:. daemon.Daemon \
+      intpassphrase="$intkeypassphrase" \
       uiport=$daemonuiport \
       egwinport=$daemonegwinport \
       egwoutport=$egwport \
       egwpeerpubkey=$ethgwpubkey \
-      extkeyfilepath=$extkeyfilepath \
+      extaddress=$extaddress \
       intkeyfilepath=$intkeyfilepath \
       pubsdbfilepath=$pubsdbfilepath \
       hwmdbfilepath=$hwmdbfilepath \
       aclfilepath=$aclfilepath \
-      ipfscachedir=$ipfscachedir
-
-  echo running lottery process ...
-  pushd ../ethereum/lottery
-  echo node lotto.js "$votessca"
-  popd
+      ipfscachedir=$ipfscachedir &> $HOME/temp/daemon.out &
+  fi
 }
 
 # main -----------------------------------------------------------------------
@@ -41,32 +73,41 @@ source env.sh
 
 commd=$1
 
-daemonuiport=8804
-daemonegwinport=8805
-egwport=8806
-ethgwpubkey=04blahblahblah
-
-extkeyfilepath=$HOME/.ethereum/keystore/UTC--2016-10-23T18-50-15.853386528Z--8e9342eb769c4039aaf33da739fb2fc8af9afdc1
+extaddress="0x258b75ec103c1b4bfdf5f2f40a9e2733703b4a5a"
+ipfscachedir="$HOME/temp"
+daemonuiport="8804"
+daemonegwinport="8805"
+egwport="8806"
+ethgwpubkey="0x04734b27fd334b517855343e28ddda311c2200f19a3e7083ddf11cc40722927f1276e25c63c2dcba779cc82bc211378f33e452ba984a2f4ffaed263b9639aa6ba5"
+pubsdbfilepath="publications.db"
+aclfilepath="acl.db"
+hwmdbfilepath="hwm.db"
 intkeypassphrase="change-on-install"
-intkeyfilepath=nodeid.blk
-pubsdbfilepath=publications.db
-aclfilepath=acl.db
-hwmdbfilepath=hwm.db
-
-ipfscachedir=$HOME/temp
-
-daemonpubkey=`java $JLIB -cp $JARS:./java:. daemon.NodeIdentity $intkeypassphrase $intkeyfilepath`
+intkeyfilepath="nodeid.blk"
+daemonpubkey=`java $JLIB -cp $JARS:./java:. daemon.NodeIdentity "$intkeypassphrase" $intkeyfilepath`
 
 if [ -z $commd ]
 then
   membershipsca="0x5D1710Ec045AEcb93B7968d016bD15699560237a"
-  publishersca="0x9bc3024548c184b40c30489bB684D1Ae01582dEC"
+  publishersca="0xD3Cf41315DAf77A06bAde6A931f47C1AB98d2952"
   votesca="0xC6F5fD8356f54E1CE115b68A44042209b6252DFf"
   acctindex=8
-  acctpass="blah blah blah"
+  acctpassfile="./ethacctpass.txt"
+  acctpass=`cat $acctpassfile`
 
-  echo running geth ...
-  #geth --syncmode light --cache 4096 --ws --wsorigins "*" > geth.out 2>&1 &
+  echo -n "Run geth? "
+  read -p '[N/y]: ' -n 1 -r
+  echo
+  if [[ $REPLY =~ ^[Yy]$ ]]; then
+    gethapis="web3,eth,net,db,personal"
+    nohup geth --syncmode light \
+      --cache 4096  \
+      --rpc --rpcapi $gethapis \
+      --ws --wsorigins "*" --wsapi $gethapis \
+      --unlock "$extaddress" --password "$acctpassfile" \
+      &> $HOME/temp/geth.out &
+    sleep 5
+  fi
 
   runminer
 fi
@@ -92,7 +133,7 @@ then
   #ganache-cli --account="0x0bce878dba9cce506e81da71bb00558d1684979711cf2833bab06388f715c01a,100000000000000000000" --account="0xff7da9b82a2bd5d76352b9c385295a430d2ea8f9f6f405a7ced42a5b0e73aad7,100000000000000000000" &
 
   echo waiting for ganache to initialize ...
-  sleep 10
+  sleep 20
 
   echo deploying Treasury ...
   pushd ../../treasury/scripts

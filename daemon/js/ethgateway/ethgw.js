@@ -48,6 +48,7 @@ var acctPass = process.argv[8];
 var myPrivkey;
 var myPubkey;
 var myAddress;
+
 web3.eth.getAccounts().then( arr => {
 
   myAddress = arr[acctIndex];
@@ -59,7 +60,7 @@ web3.eth.getAccounts().then( arr => {
 
   console.log( "pubkey: " + myPubkey + "\n" +
                "config addr: " + myAddress + "\n" +
-               "calc address: " + tempaddr );
+               "calc'd addr: " + tempaddr );
 
 } );
 
@@ -95,7 +96,9 @@ const server = net.createServer( cx => {
         "id":data.id };
     }
 
+    console.log ( JSON.stringify(rsp) );
     cx.write( JSON.stringify(rsp) );
+    cx.end();
   } );
 } );
 
@@ -114,21 +117,33 @@ function handleMessage( cmd )
   var mth = cmd['method'];
   var msg = cmd['params'][0];
   var sig = cmd['params'][1];
-  var pbk  = cmd['id'];
+  var pbk = cmd['id'];
 
-  var msgHash = web3.utils.sha3( msg );
+  var msgHash = web3.utils.sha3(msg).slice(2);
   let dpubkey = ec.keyFromPublic( daemonPubkey, 'hex' );
+
   if (!dpubkey.verify(msgHash, sig) )
     throw "Daemon signature doesn't match public key.";
 
-  var msgbod = JSON.parse( web3.hexToUtf8(msg) );
+  var msgbod = JSON.parse( hexToAscii(msg) );
 
   if ('setHWM' === mth)
     handleNewHWM( msgbod['newhwm'] );
+
   else if ('publish' === mth)
-    handlePublish( msgbod['recipkey'], msgbod['hash'], msgbod['fsize'] );
+  {
+    let redmeta = msgbod['redmeta'];
+
+    if (!redmeta) redmeta = "";
+
+    handlePublish( msgbod['recipkey'],
+                   msgbod['hash'],
+                   redmeta,
+                   msgbod['fsize'] );
+  }
   else if ('vote' === mth)
-    handleVote( msgbod['blocknum'], msgbod['hash'] );
+    handleVote( msgbod['blocknum'],
+                msgbod['hash'] );
 }
 
 function handleNewHWM( newhwm )
@@ -154,14 +169,21 @@ function handleNewHWM( newhwm )
   } ).catch( err => { console.log(err); } );
 }
 
-function handlePublish( recipkey, hash, fsize )
+function handlePublish( recipkey, hash, redmeta, fsize )
 {
   // TODO: do an ipfs stat to confirm file size
 
   let price = '' + fsize * fileSizeFeeWei;
 
   web3.eth.getGasPrice().then( px => {
-    publisher.methods.publish( recipkey, hash )
+
+    console.log( '\nhandlePublish:\n' +
+                 '\n\trecipient key: ' + recipkey +
+                 '\n\tfrom: ' + myAddress +
+                 '\n\tgasPrice: ' + px +
+                 '\n\tvalue: ' + price + '\n\n' );
+
+    publisher.methods.publish( recipkey, hash, redmeta )
              .send( {from: myAddress,
                      gas: 50000,
                      gasPrice: px,
@@ -197,5 +219,15 @@ function sendToDaemon( method, msgbody )
   msg['method'] = method;
   msg['params'] = msgparams;
   msg['id'] = '' + myPubkey;
+}
+
+function hexToAscii( hexs )
+{
+	let result = '';
+
+	for (var n = 0; n < hexs.length; n += 2)
+		result += String.fromCharCode(parseInt(hexs.substr(n, 2), 16));
+
+	return result;
 }
 

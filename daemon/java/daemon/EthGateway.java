@@ -54,7 +54,11 @@ public class EthGateway
   throws Exception
   {
     Secp256k1 curve = new Secp256k1();
-    byte[] sig = curve.signECDSA( Keccak256.hash(msg.getBytes()), red_ );
+    byte[] msgHash = Keccak256.hash( msg.getBytes() );
+    System.out.println( "msgHash: " + HexString.encode(msgHash) );
+    System.out.println( "signed by: " +
+      HexString.encode(curve.publicKeyCreate(red_)) );
+    byte[] sig = curve.signECDSA( msgHash, red_ );
     String sigs = HexString.encode( sig );
 
     JSONArray parts = new JSONArray();

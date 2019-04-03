@@ -17,5 +17,4 @@ passes along to the daemon.
 
 [node.js (any recent version)](https://nodejs.org/en/)
 [web3 npm module 1.0.0+](https://www.npmjs.com/package/web3)
-[indutny/elliptic 6.4.1](https://github.com/indutny/elliptic)
 [ethereumjs/keythereum 1.0.4](https://github.com/ethereumjs/keythereum)
