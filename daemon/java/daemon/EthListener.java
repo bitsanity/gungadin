@@ -25,7 +25,7 @@ public class EthListener extends WorkerBase
   private IPFS ipfs_;
   private EthGateway gateway_;
 
-  public EthListener( Socket client,
+  public EthListener( ServerSocket sock,
                       byte[] daemonpubkey,
                       HWM hwm,
                       String nodeAddr,
@@ -33,20 +33,13 @@ public class EthListener extends WorkerBase
                       IPFS ipfs,
                       EthGateway gateway ) throws Exception
   {
-    super( client );
+    super( sock );
     daemonpubkey_ = daemonpubkey;
     hwm_ = hwm;
     nodeAddr_ = nodeAddr;
     pubs_ = pubs;
     ipfs_ = ipfs;
     gateway_ = gateway;
-
-    // ok to back up some blocks to make sure we get every event
-    long newhwm = hwm_.get() - 100L;
-    if (0L > newhwm)
-      newhwm = 0L;
-
-    gateway_.setHWM( newhwm );
   }
 
   // @override
@@ -105,11 +98,20 @@ public class EthListener extends WorkerBase
                          ip,
                          Long.parseLong(bn),
                          Integer.parseInt(li) );
+
       }
+
+      gateway_.setHWM( hwm_.get() );
     }
 
     if (method.equals( "Fee" )) handleFee( (String)json.get("fee") );
-    return null;
+
+    if (method.equals( "Voted" ))
+      handleVoted( Long.parseLong((String)json.get("blockNum")),
+                   Integer.parseInt((String)json.get("logindex")),
+                   (String)json.get("ipfsHash") );
+
+    return okMessage( HexString.encode(daemonpubkey_) );
   }
 
   private void handlePublished( String pubkey,
@@ -120,22 +122,22 @@ public class EthListener extends WorkerBase
     System.out.println( "receiverpubkey: " + pubkey );
     System.out.println( "ipfshash: " + ipfshash );
 
-    // ipfshash is in base58 but our address is hexstring, so convert ipfshash
-    // to hexstring by hashing it, then determine if last character matches
+    // ipfshash is base58 but our address is hexstring, so convert ipfshash
+    // to hexstring by hashing then determine if last character matches
 
     char myLast = nodeAddr_.charAt( nodeAddr_.length() - 1 );
 
-    String ipfsrehashed =
-      new String( Keccak256.hash(ipfshash.getBytes()) ).toUpperCase();
-
+    String ipfsrehashed = new String( Keccak256.hash(ipfshash.getBytes()) );
     char ipfslast = ipfsrehashed.charAt( ipfsrehashed.length() - 1 );
 
-    if (myLast == ipfslast)
+    if (Character.toUpperCase(myLast) == Character.toUpperCase(ipfslast))
     {
       ipfs_.saveLocal( ipfshash );
       hwm_.set( blockNum );
-      byte[] hash = pubs_.nextHash( HexString.decode(ipfshash) );
+      pubs_.insert( ipfshash, blockNum, logindex );
 
+      byte[] hash = pubs_.nextHash( HexString.decode(ipfshash) );
+      System.out.println( "voting on block: " + blockNum );
       gateway_.vote( blockNum, HexString.encode(hash) );
     }
     else
@@ -147,8 +149,23 @@ public class EthListener extends WorkerBase
     System.out.println( "new fee: " + newfee );
   }
 
-  private void handleVoted( ) throws Exception
+  private void handleVoted( long blockNum, int logindex, String ipfshash )
+  throws Exception
   {
+    System.out.println( "handleVoted block: " + blockNum +
+                        ", hash: " + ipfshash );
+
+    String ipfsrehashed = new String( Keccak256.hash(ipfshash.getBytes()) );
+    char ipfslast = ipfsrehashed.charAt( ipfshash.length() - 1 );
+    char myLast = nodeAddr_.charAt( nodeAddr_.length() - 1 );
+    if (Character.toUpperCase(myLast) != Character.toUpperCase(ipfslast))
+    {
+      System.out.println( "not my shard" );
+      return;
+    }
+
+    // ignore if we've already voted on an earlier block
+
   }
 
 }

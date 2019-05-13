@@ -15,7 +15,7 @@ import tbox.*;
 
 public class KGWorker extends WorkerBase
 {
-  private Socket client_ = null;
+  private ServerSocket sock_ = null;
   private NodeIdentity nodeId_ = null;
   private ACL acl_ = null;
   private IPFS ipfs_ = null;
@@ -28,13 +28,14 @@ public class KGWorker extends WorkerBase
   private byte[] K_ = null;      // client's public key
   private String id_ = null;     // client.cookie
 
-  public KGWorker( Socket client,
+  public KGWorker( ServerSocket sock,
                    NodeIdentity intid,
                    ACL acl,
                    IPFS ipfs,
                    EthGateway gateway )
   {
-    super( client );
+    super( sock );
+
     nodeId_ = intid;
     acl_ = acl;
     ipfs_ = ipfs;

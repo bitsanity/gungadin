@@ -31,7 +31,6 @@ const net = require( 'net' );
 const Web3 = require( 'web3' );
 const web3 =
   new Web3( new Web3.providers.WebsocketProvider("ws://localhost:8546") );
-//new Web3( new Web3.providers.HttpProvider("http://localhost:8545") );
 
 var EC = require( 'elliptic' ).ec;
 var ec = new EC( 'secp256k1' );
@@ -64,15 +63,11 @@ web3.eth.getAccounts().then( arr => {
 
 } );
 
+// ===========================================================================
 var publisher = new web3.eth.Contract(
   JSON.parse( fs.readFileSync(
     '../../../ethereum/publisher/build/Publisher_sol_Publisher.abi')
     .toString() ), publishSCA );
-
-var votes = new web3.eth.Contract(
-  JSON.parse( fs.readFileSync(
-    '../../../ethereum/votes/build/Votes_sol_Votes.abi').toString() ),
-    voteSCA );
 
 const server = net.createServer( cx => {
 
@@ -96,7 +91,6 @@ const server = net.createServer( cx => {
         "id":data.id };
     }
 
-    console.log ( JSON.stringify(rsp) );
     cx.write( JSON.stringify(rsp) );
     cx.end();
   } );
@@ -110,10 +104,32 @@ server.listen( myPort, () => {
   console.log( 'ethgw is listening on ' + myPort );
 } );
 
+// ===========================================================================
+var votes = new web3.eth.Contract(
+  JSON.parse( fs.readFileSync(
+    '../../../ethereum/votes/build/Votes_sol_Votes.abi').toString() ),
+    voteSCA );
+
+votes.events.Vote()
+.on( 'data', (evt) => {
+
+  let blocknum = parseInt( evt.topics[2] );
+  let hash = web3.eth.abi.decodeParameters( ["string"], evt.raw.data )['0'];
+
+  let msgbody = {};
+  msgbody.blockNum = blocknum;
+  msgbody.ipfsHash = hash;
+  msgbody.logindex = evt.logIndex;
+
+  console.log( 'vote block ' + blocknum + ', hash ' + hash );
+  sendToDaemon( 'Voted', msgbody );
+
+} )
+.on( 'error', console.error );
+
+// ===========================================================================
 function handleMessage( cmd )
 {
-  console.log( 'handleMessage:\n' + JSON.stringify(cmd) );
-
   var mth = cmd['method'];
   var msg = cmd['params'][0];
   var sig = cmd['params'][1];
@@ -133,7 +149,6 @@ function handleMessage( cmd )
   else if ('publish' === mth)
   {
     let redmeta = msgbod['redmeta'];
-
     if (!redmeta) redmeta = "";
 
     handlePublish( msgbod['recipkey'],
@@ -155,17 +170,26 @@ function handleNewHWM( newhwm )
     let data = [];
     for (var ii = 0; ii < events.length; ii++)
     {
-      let elem = {};
-      elem['pubkey'] =
-        web3.eth.abi.decodeParameter( 'bytes', events[ii].raw.topics[1] );
-      elem['ipfshash'] =
-        web3.eth.abi.decodeParameter( 'string', events[ii].raw.data );
-      elem['blocknum'] = events[ii].blockNumber;
-      elem['logindex'] = events[ii].logIndex;
+      let evt = {};
+      evt.receiverpublickey = '' + events[ii].raw.topics[1];
 
-      data.push( elem );
+      let decoded = web3.eth.abi.decodeParameters(
+        ["string", "string"], events[ii].raw.data );
+
+      evt.ipfshash = decoded[0];
+      evt.redmeta = decoded[1];
+
+      evt.blocknum = events[ii].blockNumber;
+      evt.logindex = events[ii].logIndex;
+
+      data.push( evt );
     }
-    sendToDaemon( 'Published', data );
+
+    let msgbody = {};
+    msgbody.events = data;
+
+    sendToDaemon( 'Published', msgbody );
+
   } ).catch( err => { console.log(err); } );
 }
 
@@ -215,10 +239,16 @@ function sendToDaemon( method, msgbody )
   msgparams.push( msg );
   msgparams.push( web3.utils.utf8ToHex(sig) );
 
-  var msg = {};
-  msg['method'] = method;
-  msg['params'] = msgparams;
-  msg['id'] = '' + myPubkey;
+  var outbound = {};
+  outbound['method'] = method;
+  outbound['params'] = msgparams;
+  outbound['id'] = '' + myPubkey;
+
+  let client = new net.Socket();
+  client.connect( daemonPort, '127.0.0.1', () => {
+    client.write( JSON.stringify(outbound) );
+    client.destroy();
+  } );
 }
 
 function hexToAscii( hexs )

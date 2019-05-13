@@ -23,6 +23,9 @@ public class EthGateway
   {
     JSONObject msgbody = new JSONObject();
     msgbody.put( "newhwm", Long.toString(newhwm) );
+
+    System.out.println( "setHWM msgbody: " + msgbody.toJSONString() );
+
     String msg = HexString.encode( msgbody.toJSONString().getBytes() );
 
     send( makeRpc("setHWM", msg) );
@@ -53,6 +56,8 @@ public class EthGateway
   private String makeRpc( String method, String msg )
   throws Exception
   {
+    System.out.println( "makeRpc msg: " + msg );
+
     Secp256k1 curve = new Secp256k1();
     byte[] msgHash = Keccak256.hash( msg.getBytes() );
     System.out.println( "msgHash: " + HexString.encode(msgHash) );

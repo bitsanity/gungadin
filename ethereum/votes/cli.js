@@ -40,7 +40,7 @@ function printEvent(evt) {
 
   console.log( 'Voted:\n\tvoter = ' + shorten(evt.raw.topics[1]) +
                '\n\tblock = '       + parseInt(evt.raw.topics[2]) +
-               '\n\tipfshash = '    + hash[0] );
+               '\n\tipfshash = '    + hash['0'] );
 }
 
 const cmds =

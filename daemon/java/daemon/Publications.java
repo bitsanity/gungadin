@@ -5,8 +5,7 @@ import java.util.*;
 
 import tbox.*;
 
-// Remembers data for all the Publication events pertaining to this node.
-// Caller to manage sharding
+// Remembers data for all the Publication events pertaining to this node/shard
 
 public class Publications
 {

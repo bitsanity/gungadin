@@ -29,20 +29,29 @@ public class Daemon
 
     try
     {
-      while( true )
-      {
-        // thread to listen to the UI
-        new KGWorker( ss.accept(), daemonId_, acl_, ipfs_, gateway_ ).start();
-
-        // thread to listen for incoming events from Ethereum
-        new EthListener( st.accept(),
+      EthListener el =
+        new EthListener( st,
                          ethPeerPubkey_,
                          hwm_,
                          nodeAddr_,
                          pubs_,
                          ipfs_,
-                         gateway_ ).start();
-      }
+                         gateway_ );
+      el.start();
+
+      KGWorker kgw = new KGWorker( ss, daemonId_, acl_, ipfs_, gateway_ );
+      kgw.start();
+
+      // kickstart mining
+      // back up a few blocks to make sure we get every event
+      long newhwm = hwm_.get() - 100L;
+      if (0L > newhwm)
+        newhwm = 0L;
+
+      gateway_.setHWM( newhwm );
+
+      // suspend main thread let the daemon threads do the work
+      Thread.currentThread().sleep( Long.MAX_VALUE );
     }
     catch( Exception e )
     {

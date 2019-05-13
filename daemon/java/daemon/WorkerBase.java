@@ -13,49 +13,51 @@ public class WorkerBase extends Thread
   public static final int ERR_BAD_G = 3;
   public static final int ERR_K_UNK = 4;
 
-  private Socket client_ = null;
+  private ServerSocket sock_ = null;
   private boolean testmode_ = false;
 
-  public WorkerBase( Socket client )
+  public WorkerBase( ServerSocket sock )
   {
-    client_ = client;
+    sock_ = sock;
   }
 
   public void run()
   {
-    try {
-      work();
-    }
-    catch( Exception e ) {
-      e.printStackTrace();
-    }
-
-    try {
-      client_.close();
-    }
-    catch( Exception e ) { }
-  }
-
-  public void work() throws Exception
-  {
-    BufferedReader rdr = new BufferedReader(
-      new InputStreamReader(client_.getInputStream()) );
-
-    PrintWriter pw = new PrintWriter( client_.getOutputStream(), true );
-
-    JSONParser parser = null; // different parser for each interaction
-
-    while (true)
+    while( true )
     {
-      String msg = rdr.readLine();
-      if (null == msg) break;
+      Socket client = null;
+      PrintWriter pw = null;
 
-      parser = new JSONParser();
-      JSONObject jreq = (JSONObject) parser.parse( msg );
+      try {
+        client = sock_.accept();
 
-      JSONObject repl = replyTo( jreq );
+        BufferedReader rdr = new BufferedReader(
+          new InputStreamReader(client.getInputStream()) );
 
-      pw.println( repl.toJSONString() );
+        pw = new PrintWriter( client.getOutputStream(), true );
+
+        JSONParser parser = null;
+        while (true)
+        {
+          String msg = rdr.readLine();
+          if (null == msg) break;
+
+          parser = new JSONParser();
+          JSONObject jreq = (JSONObject) parser.parse( msg );
+          JSONObject repl = replyTo( jreq );
+          pw.println( repl.toJSONString() );
+
+          pw.flush();
+          pw.close();
+        }
+      }
+      catch( Exception e ) {
+        e.printStackTrace();
+      }
+      finally {
+        try{ client.close(); } catch( Exception e ) {}
+      }
+
     }
   }
 
@@ -76,8 +78,23 @@ public class WorkerBase extends Thread
     return errmsg;
   }
 
-  // subclasses to override this with specific implementations
+  public JSONObject okMessage( String id ) throws Exception
+  {
+    JSONObject okBody = new JSONObject();
+    okBody.put( "code", new Integer(200) );
+    okBody.put( "message", "null" );
+    okBody.put( "data", "null" );
+
+    JSONObject okMsg = new JSONObject();
+    okMsg.put( "result", "null" );
+    okMsg.put( "error", okBody );
+    okMsg.put( "id", (null != id ? id : "null") );
+    return okMsg;
+  }
+
+  // subclasses will override this with specific implementations
   public JSONObject replyTo( JSONObject request ) throws Exception {
     return null;
   }
 }
+
