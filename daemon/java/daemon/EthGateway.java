@@ -93,8 +93,9 @@ public class EthGateway
         new InputStreamReader(sock.getInputStream()) );
 
       String rsp;
-      while ((rsp = in.readLine()) != null) { }
-      System.out.println( "ethgw replied: " + rsp );
+      while ((rsp = in.readLine()) != null) {
+        System.out.println( "ethgw replied: " + rsp );
+      }
 
     }
     catch( Exception e ) {

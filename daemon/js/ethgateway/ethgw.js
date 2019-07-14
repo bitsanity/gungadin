@@ -64,11 +64,6 @@ web3.eth.getAccounts().then( arr => {
 } );
 
 // ===========================================================================
-var publisher = new web3.eth.Contract(
-  JSON.parse( fs.readFileSync(
-    '../../../ethereum/publisher/build/Publisher_sol_Publisher.abi')
-    .toString() ), publishSCA );
-
 const server = net.createServer( cx => {
 
   let rsp = {};
@@ -91,6 +86,8 @@ const server = net.createServer( cx => {
         "id":data.id };
     }
 
+    console.log( 'returning: ' + JSON.stringify(rsp) );
+
     cx.write( JSON.stringify(rsp) );
     cx.end();
   } );
@@ -105,10 +102,30 @@ server.listen( myPort, () => {
 } );
 
 // ===========================================================================
+var publisher = new web3.eth.Contract(
+  JSON.parse( fs.readFileSync(
+    '../../../ethereum/publisher/build/Publisher_sol_Publisher.abi')
+    .toString() ), publishSCA );
+
+console.log( 'watching ' + publishSCA + ' for publication events.' );
+
+publisher.events.Published()
+.on( 'data', (evt) => {
+
+  let oneevt = pubEventToObj( evt );
+  let msgbody = {};
+  msgbody.events = oneevt;
+  sendToDaemon( 'Published', msgbody );
+} )
+.on( 'error', console.error );
+
+// ===========================================================================
 var votes = new web3.eth.Contract(
   JSON.parse( fs.readFileSync(
     '../../../ethereum/votes/build/Votes_sol_Votes.abi').toString() ),
     voteSCA );
+
+console.log( 'watching ' + voteSCA + ' for votes.' );
 
 votes.events.Vote()
 .on( 'data', (evt) => {
@@ -120,6 +137,7 @@ votes.events.Vote()
   msgbody.blockNum = blocknum;
   msgbody.ipfsHash = hash;
   msgbody.logindex = evt.logIndex;
+  msgbody.voteraddr = evt.topics[1];
 
   console.log( 'vote block ' + blocknum + ', hash ' + hash );
   sendToDaemon( 'Voted', msgbody );
@@ -130,6 +148,8 @@ votes.events.Vote()
 // ===========================================================================
 function handleMessage( cmd )
 {
+  console.log( 'handleMessage: ' + JSON.stringify(cmd) );
+
   var mth = cmd['method'];
   var msg = cmd['params'][0];
   var sig = cmd['params'][1];
@@ -141,7 +161,7 @@ function handleMessage( cmd )
   if (!dpubkey.verify(msgHash, sig) )
     throw "Daemon signature doesn't match public key.";
 
-  var msgbod = JSON.parse( hexToAscii(msg) );
+  var msgbod = JSON.parse( hexToText(msg) );
 
   if ('setHWM' === mth)
     handleNewHWM( msgbod['newhwm'] );
@@ -170,18 +190,8 @@ function handleNewHWM( newhwm )
     let data = [];
     for (var ii = 0; ii < events.length; ii++)
     {
-      let evt = {};
-      evt.receiverpublickey = '' + events[ii].raw.topics[1];
-
-      let decoded = web3.eth.abi.decodeParameters(
-        ["string", "string"], events[ii].raw.data );
-
-      evt.ipfshash = decoded[0];
-      evt.redmeta = decoded[1];
-
-      evt.blocknum = events[ii].blockNumber;
-      evt.logindex = events[ii].logIndex;
-
+      let evt = pubEventToObj( events[ii] );
+      console.log( 'handleNewHWM evt: ' + JSON.stringify(evt) );
       data.push( evt );
     }
 
@@ -230,19 +240,26 @@ function handleVote( blocknum, hash )
 
 function sendToDaemon( method, msgbody )
 {
-  var msg = web3.utils.utf8ToHex( JSON.stringify(msgbody) );
-  let msgHash = web3.utils.sha3( msg );
+  var msg = textToHex( JSON.stringify(msgbody) );
+
+  let msgHash = web3.utils.sha3( msg ).slice( 2 );
   let eckp = ec.keyFromPrivate( myPrivkey, "hex" );
-  let sig = eckp.sign( msgHash );
+  let sig = bytesToHex( eckp.sign(msgHash).toDER() );
 
   var msgparams = [];
   msgparams.push( msg );
-  msgparams.push( web3.utils.utf8ToHex(sig) );
+  msgparams.push( sig );
 
   var outbound = {};
   outbound['method'] = method;
   outbound['params'] = msgparams;
   outbound['id'] = '' + myPubkey;
+
+  console.log( 'sendToDaemon on port: ' + daemonPort +
+               ', input: ' + JSON.stringify(msgbody) +
+               ', message: ' + JSON.stringify(outbound) +
+               ', msgHash: ' + msgHash +
+               ', sig: ' + sig );
 
   let client = new net.Socket();
   client.connect( daemonPort, '127.0.0.1', () => {
@@ -251,13 +268,66 @@ function sendToDaemon( method, msgbody )
   } );
 }
 
-function hexToAscii( hexs )
+function pubEventToObj( evt )
+{
+  let result = {};
+  result.receiverpublickey = '' + evt.raw.topics[1];
+
+  let decoded = web3.eth.abi.decodeParameters(
+    ["string", "string"], evt.raw.data );
+
+  result.ipfshash = decoded[0];
+  result.redmeta = decoded[1];
+
+  result.blocknum = evt.blockNumber;
+  result.logindex = evt.logIndex;
+
+  return result;
+}
+
+function textToHex( txt )
+{
+  let result = '';
+  for (let ii = 0; ii < txt.length; ii++)
+  {
+    let it = txt.charCodeAt(ii).toString(16);
+    if (it.length < 2) it = "0" + it;
+    result += it;
+  }
+  return result;
+}
+
+function hexToText( hexs )
 {
 	let result = '';
 
-	for (var n = 0; n < hexs.length; n += 2)
-		result += String.fromCharCode(parseInt(hexs.substr(n, 2), 16));
+	for (let ii = 0; ii < hexs.length; ii += 2)
+		result += String.fromCharCode(parseInt(hexs.substr(ii, 2), 16));
 
 	return result;
+}
+
+function hexToBytes(hex)
+{
+  let bytes = [];
+
+  for (ii = 0; ii < hex.length; ii += 2)
+    bytes.push( parseInt(hex.substr(ii, 2), 16) );
+
+  return bytes;
+}
+
+function bytesToHex(bytes)
+{
+  let hex = [];
+
+  for (ii = 0; ii < bytes.length; ii++)
+  {
+    var current = bytes[ii] < 0 ? bytes[ii] + 256 : bytes[ii];
+    hex.push( (current >>> 4).toString(16) );
+    hex.push( (current & 0xF).toString(16) );
+  }
+
+  return hex.join("");
 }
 

@@ -13,6 +13,7 @@ public class Daemon
   private int egwoutport_;
   private byte[] ethPeerPubkey_;
   private HWM hwm_;
+  private Votes votes_;
   private String nodeAddr_; // Node's Ethereum address
   private NodeIdentity daemonId_;
   private Publications pubs_;
@@ -33,6 +34,7 @@ public class Daemon
         new EthListener( st,
                          ethPeerPubkey_,
                          hwm_,
+                         votes_,
                          nodeAddr_,
                          pubs_,
                          ipfs_,
@@ -111,6 +113,9 @@ public class Daemon
     if (null == argsMap.get("hwmdbfilepath"))
       argsMap.put("hwmdbfilepath" , "./hwmdb" );
 
+    if (null == argsMap.get("votesdbfilepath"))
+      argsMap.put("votesdbfilepath" , "./votesdb" );
+
     // mandatory parameters, crash if not specified
 
     if (    null == argsMap.get("egwpeerpubkey")
@@ -132,6 +137,7 @@ public class Daemon
       "\tintkeyfilepath = " + argsMap.get("intkeyfilepath") + "\n" +
       "\tpubsdbfilepath = " + argsMap.get("pubsdbfilepath") + "\n" +
       "\thwmdbfilepath = " + argsMap.get("hwmdbfilepath") + "\n" +
+      "\tvotesdbfilepath = " + argsMap.get("votesdbfilepath") + "\n" +
       "\taclfilepath = " + argsMap.get("aclfilepath") + "\n"
     );
 
@@ -142,6 +148,8 @@ public class Daemon
     matt.egwoutport_ = Integer.parseInt( argsMap.get("egwoutport") );
     matt.ethPeerPubkey_ = HexString.decode( argsMap.get("egwpeerpubkey") );
     matt.hwm_ = new HWM( argsMap.get("hwmdbfilepath") );
+    matt.votes_ = new Votes( argsMap.get("votesdbfilepath"),
+                             argsMap.get("extaddress") );
     matt.pubs_ = new Publications( argsMap.get("pubsdbfilepath") );
     matt.ipfs_ = new IPFS();
     matt.acl_ = new ACL( argsMap.get("aclfilepath") );

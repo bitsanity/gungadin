@@ -17,25 +17,28 @@ import tbox.*;
 public class EthListener extends WorkerBase
 {
   // require peer to sign messages sent into here with this pubkey
-  private byte[] daemonpubkey_;
+  private byte[] ethgwpubkey_;
 
   private String nodeAddr_; // for sharding need last char of address
   private Publications pubs_;
   private HWM hwm_;
+  private Votes votes_;
   private IPFS ipfs_;
   private EthGateway gateway_;
 
   public EthListener( ServerSocket sock,
-                      byte[] daemonpubkey,
+                      byte[] ethgwpubkey,
                       HWM hwm,
+                      Votes votes,
                       String nodeAddr,
                       Publications pubs,
                       IPFS ipfs,
                       EthGateway gateway ) throws Exception
   {
     super( sock );
-    daemonpubkey_ = daemonpubkey;
+    ethgwpubkey_ = ethgwpubkey;
     hwm_ = hwm;
+    votes_ = votes;
     nodeAddr_ = nodeAddr;
     pubs_ = pubs;
     ipfs_ = ipfs;
@@ -46,7 +49,7 @@ public class EthListener extends WorkerBase
   // handle message from separate process that talks to Ethereum
   public JSONObject replyTo( JSONObject request ) throws Exception
   {
-    // public key of the communicating peer, not a person/subject
+    // public key of the process, not a person
     byte[] pubkey = HexString.decode( (String)request.get( "id" ) );
 
     if (null == pubkey || (pubkey.length != 33 && pubkey.length != 65))
@@ -55,11 +58,11 @@ public class EthListener extends WorkerBase
           "null or invalid length",
           ((pubkey == null) ? "<null>" : HexString.encode(pubkey)) );
 
-    if (!Arrays.equals(pubkey, daemonpubkey_))
+    if (!Arrays.equals(pubkey, ethgwpubkey_))
       return errorMessage( ERR_BAD_G,
         "Key mismatch",
         "Peer pubkey does not match expected key",
-        "expected: " + HexString.encode(daemonpubkey_) +
+        "expected: " + HexString.encode(ethgwpubkey_) +
         "received: " + ((pubkey == null) ? "<null>"
                                          : HexString.encode(pubkey)) );
 
@@ -83,44 +86,44 @@ public class EthListener extends WorkerBase
     JSONObject json = (JSONObject) parser.parse(
                         new String(HexString.decode(msg), "UTF-8") );
 
+    System.out.println( "EthListener.replyTo: " + json.toString() );
+
     if (method.equals( "Published" ))
     {
-      JSONArray evts = (JSONArray) request.get( "events" );
+      JSONArray evts = (JSONArray) json.get( "events" );
 
       for (int ii = 0; ii < evts.size(); ii++) {
         JSONObject obj = (JSONObject) evts.get( ii );
-        String pk = (String) obj.get( "pubkey" );
+        String pk = (String) obj.get( "receiverpublickey" );
         String ip = (String) obj.get( "ipfshash" );
-        String bn = (String) obj.get( "blocknum" );
-        String li = (String) obj.get( "logindex" );
+        Long bn = (Long) obj.get( "blocknum" );
+        Long li = (Long) obj.get( "logindex" );
 
-        handlePublished( pk,
-                         ip,
-                         Long.parseLong(bn),
-                         Integer.parseInt(li) );
-
+        handlePublished( pk, ip, bn, li );
       }
-
-      gateway_.setHWM( hwm_.get() );
     }
 
     if (method.equals( "Fee" )) handleFee( (String)json.get("fee") );
 
     if (method.equals( "Voted" ))
-      handleVoted( Long.parseLong((String)json.get("blockNum")),
+      handleVoted( (String)json.get("voteraddr"),
+                   Long.parseLong((String)json.get("blockNum")),
                    Integer.parseInt((String)json.get("logindex")),
                    (String)json.get("ipfsHash") );
 
-    return okMessage( HexString.encode(daemonpubkey_) );
+    // should reply with daemon public key but ethgw ignores this response for
+    // now. TODO make it check
+    return okMessage( null );
   }
 
   private void handlePublished( String pubkey,
                                 String ipfshash,
                                 long blockNum,
-                                int logindex ) throws Exception
+                                long logindex ) throws Exception
   {
-    System.out.println( "receiverpubkey: " + pubkey );
-    System.out.println( "ipfshash: " + ipfshash );
+    System.out.println( "ipfshash: " + ipfshash +
+                        ", block: " + blockNum +
+                        ", index: " + logindex );
 
     // ipfshash is base58 but our address is hexstring, so convert ipfshash
     // to hexstring by hashing then determine if last character matches
@@ -135,13 +138,16 @@ public class EthListener extends WorkerBase
       ipfs_.saveLocal( ipfshash );
       hwm_.set( blockNum );
       pubs_.insert( ipfshash, blockNum, logindex );
-
       byte[] hash = pubs_.nextHash( HexString.decode(ipfshash) );
+
       System.out.println( "voting on block: " + blockNum );
       gateway_.vote( blockNum, HexString.encode(hash) );
     }
     else
       System.out.println( "no match: " + myLast + " != " + ipfslast );
+
+    if (blockNum > hwm_.get())
+      gateway_.setHWM( blockNum );
   }
 
   private void handleFee( String newfee ) throws Exception
@@ -149,10 +155,13 @@ public class EthListener extends WorkerBase
     System.out.println( "new fee: " + newfee );
   }
 
-  private void handleVoted( long blockNum, int logindex, String ipfshash )
-  throws Exception
+  private void handleVoted( String voteraddr,
+                            long blockNum,
+                            long logindex,
+                            String ipfshash ) throws Exception
   {
-    System.out.println( "handleVoted block: " + blockNum +
+    System.out.println( "handleVoted voter: " + voteraddr +
+                        ", block: " + blockNum +
                         ", hash: " + ipfshash );
 
     String ipfsrehashed = new String( Keccak256.hash(ipfshash.getBytes()) );
@@ -160,12 +169,20 @@ public class EthListener extends WorkerBase
     char myLast = nodeAddr_.charAt( nodeAddr_.length() - 1 );
     if (Character.toUpperCase(myLast) != Character.toUpperCase(ipfslast))
     {
-      System.out.println( "not my shard" );
+      System.out.println( "not my shard: " + ipfslast );
       return;
     }
 
-    // ignore if we've already voted on an earlier block
-
+    String myhash = votes_.myVoteOnBlock( blockNum );
+    if (null != myhash)
+    {
+      if ( !myhash.equalsIgnoreCase(votes_.majorityVote(blockNum)) )
+      {
+        pubs_.clearAll();
+        hwm_.set( 0L );
+        gateway_.setHWM( 0L );
+      }
+    }
   }
 
 }

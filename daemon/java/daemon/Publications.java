@@ -36,7 +36,7 @@ public class Publications
     }
   }
 
-  public void insert( String ipfs, long blocknum, int logix) throws Exception
+  public void insert( String ipfs, long blocknum, long logix) throws Exception
   {
     if (null == ipfs || 0 == ipfs.length() || 0 >= blocknum)
       throw new Exception( "Invalid INSERT param '" + ipfs +
@@ -56,8 +56,21 @@ public class Publications
     }
   }
 
-  // calculate hash of all IPFSHashes in the DB (such as on startup or if the
-  // node gets out-of-sync somehow)
+  public void clearAll() throws Exception
+  {
+    String sql = "DELETE FROM Publications";
+
+    Statement stmt = null;
+    try {
+      stmt = db_.createStatement();
+      stmt.executeUpdate( sql );
+    }
+    finally {
+      stmt.close();
+    }
+  }
+
+  // calculate hash of all IPFSHashes in the DB
   public byte[] fullHashSum() throws Exception
   {
     lastResult_ = null;

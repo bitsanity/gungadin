@@ -45,8 +45,8 @@ public class WorkerBase extends Thread
           parser = new JSONParser();
           JSONObject jreq = (JSONObject) parser.parse( msg );
           JSONObject repl = replyTo( jreq );
+System.out.println( "reply: " + repl.toJSONString() );
           pw.println( repl.toJSONString() );
-
           pw.flush();
           pw.close();
         }
