@@ -249,10 +249,16 @@ public class FilesPanel extends JPanel
       byte[] sig = tbox.Base64.decode( (String)current.get( "sig" ) );
       JSONObject data = (JSONObject)current.get( "data" );
       byte[] msg = data.toJSONString().getBytes();
+      byte[] msghash = SHA256.hash( msg );
 
-      senderpubkey = curve.recoverSchnorr( SHA256.hash(msg), sig );
+      //senderpubkey = curve.recoverSchnorr( msghash, sig );
+      senderpubkey = curve.recoverPublicKey( msghash, sig );
       if (null == senderpubkey)
         throw new Exception( "failed to recover sender key" );
+
+      if ( !curve.verifyECDSARecoverable(sig, msghash, senderpubkey)
+       &&  !curve.verifySchnorr(sig, msghash, senderpubkey) )
+        throw new Exception( "signature invalid" );
 
       blackBuffer.append( (String)data.get("black") );
 

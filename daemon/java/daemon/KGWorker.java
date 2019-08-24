@@ -269,7 +269,9 @@ public class KGWorker extends WorkerBase
       data.put( "black", chunks[ii] );
 
       byte[] msg = data.toString().getBytes();
-      byte[] sig = new Secp256k1().signSchnorr( SHA256.hash(msg), redkey );
+      //byte[] sig = new Secp256k1().signSchnorr( SHA256.hash(msg), redkey );
+      byte[] sig =
+        new Secp256k1().signECDSARecoverable( SHA256.hash(msg), redkey );
 
       if (null == sig || 0 == sig.length)
         throw new Exception( "schnorr signature failed." );
